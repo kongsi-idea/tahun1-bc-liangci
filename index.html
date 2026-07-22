@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>量词大冒险 · 像素闯关</title>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+<style>
+  :root{
+    --bg:#0B1E2D; --bg-soft:#16324a; --teal:#0EA5B7; --teal-light:#14C2D6;
+    --gold:#F0A93B; --gold-soft:#FFE8AE; --coral:#E8543F; --green:#2fae66;
+    --ink:#5A3B1E; --text-dim:#8fb9c9;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: var(--bg);
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    overflow: hidden;
+    touch-action: none;
+  }
+  #app { position: relative; width: 100%; height: 100vh; }
+  .screen {
+    position: absolute; inset: 0; display: none;
+    align-items: center; justify-content: center;
+    background: radial-gradient(circle at 50% 25%, var(--bg-soft), var(--bg));
+    overflow-y: auto; padding: 24px 14px;
+  }
+  .screen.active { display: flex; }
+
+  .card {
+    background: linear-gradient(180deg, #16324a, #0B1E2D);
+    border-radius: 18px;
+    border: 2px solid var(--teal);
+    box-shadow: 0 12px 0 rgba(0,0,0,0.35), 0 0 30px rgba(14,165,183,0.25);
+    padding: 22px 22px 18px;
+    text-align: center;
+    animation: pop-in 0.22s ease-out;
+  }
+  @keyframes pop-in {
+    from { transform: scale(0.7) translateY(20px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+  }
+  .btn {
+    padding: 13px 18px; border: none; border-radius: 10px; cursor: pointer;
+    font-family: inherit; font-size: 16px; font-weight: 800; color: #fff;
+    background: linear-gradient(180deg, var(--teal-light), var(--teal));
+    border-bottom: 4px solid #086b78;
+  }
+  .btn:active { border-bottom-width: 1px; transform: translateY(3px); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.4); }
+  .btn.secondary { background: linear-gradient(180deg, #3a4f5e, #24343f); border-bottom-color: #14202a; }
+  .btn.warn { background: linear-gradient(180deg, #ef8a6a, var(--coral)); border-bottom-color: #8a2a20; }
+  .btn.gold { background: linear-gradient(180deg, #ffd873, var(--gold)); border-bottom-color: #96650f; color: #4a2f06; }
+
+  /* ---------- 选人页 ---------- */
+  #screen-select .card { width: min(92%, 560px); }
+  #select-title { font-size: 26px; font-weight: 900; color: #fff; margin-bottom: 4px; }
+  #select-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 18px; }
+  .class-tabs { display: flex; gap: 10px; justify-content: center; margin-bottom: 16px; }
+  .class-tab {
+    padding: 10px 22px; border-radius: 10px; border: 2px solid var(--teal);
+    background: transparent; color: var(--teal-light); font-weight: 800; font-size: 15px;
+    cursor: pointer; font-family: inherit;
+  }
+  .class-tab.active { background: var(--teal); color: #fff; }
+  .name-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px; max-height: 40vh; overflow-y: auto; padding: 4px 2px;
+  }
+  .name-btn {
+    padding: 10px 6px; border-radius: 8px; border: 2px solid #2c4c5c; border-bottom-width: 3px;
+    background: #123246; color: #d8ecf2; font-weight: 700; font-size: 13px;
+    cursor: pointer; font-family: inherit;
+  }
+  .name-btn:active { border-bottom-width: 1px; transform: translateY(2px); }
+  .name-btn.picked { border-color: var(--gold); background: #3a2a10; color: var(--gold-soft); }
+  #select-board-link {
+    margin-top: 18px; background: none; border: none; color: var(--text-dim);
+    font-size: 12px; text-decoration: underline; cursor: pointer; font-family: inherit;
+  }
+
+  /* ---------- Slides 学习页 ---------- */
+  #screen-slides { padding: 16px; }
+  #slides-wrap { width: min(94%, 620px); display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  #slides-head { width: 100%; display: flex; justify-content: space-between; align-items: center; color: var(--text-dim); font-size: 12px; font-weight: 700; }
+  #slides-timer { color: var(--gold-soft); }
+  #slide-dots { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; max-width: 100%; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #2c4c5c; }
+  .dot.seen { background: var(--teal); }
+  .dot.current { background: var(--gold); transform: scale(1.4); }
+
+  #slide-card {
+    width: 100%; min-height: 340px;
+    background: linear-gradient(180deg, #FFF6DD, #FFE8AE);
+    border: 2px solid var(--gold); border-radius: 18px;
+    box-shadow: 0 12px 0 rgba(150,90,10,0.35), 0 0 30px rgba(240,169,59,0.3);
+    padding: 26px 22px; color: var(--ink);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  }
+  .slide-intro, .slide-outro { text-align: center; }
+  .slide-intro h2, .slide-outro h2 { font-size: 22px; margin: 0 0 10px; }
+  .slide-intro p, .slide-outro p { font-size: 15px; line-height: 1.7; margin: 0; }
+  .demo-row { display: flex; gap: 8px; align-items: center; justify-content: center; margin-top: 14px; font-size: 20px; font-weight: 900; flex-wrap: wrap; }
+  .demo-chip { background: #fff; border: 2px solid var(--gold); border-radius: 10px; padding: 8px 14px; }
+  .demo-chip.op { border: none; background: none; font-size: 22px; }
+  .badge-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; max-width: 480px; }
+  .badge { width: 40px; height: 40px; border-radius: 10px; background: #fff; border: 2px solid var(--gold);
+    display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; }
+
+  .slide-char { font-size: 64px; font-weight: 900; line-height: 1; animation: char-pop 0.5s ease-out; }
+  @keyframes char-pop { from { transform: scale(0.4) rotate(-8deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
+  .slide-pinyin { font-size: 18px; font-weight: 700; color: #a87c40; }
+  .slide-desc { font-size: 14px; color: #8a6a3a; margin-bottom: 4px; }
+  .phrase-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 480px; }
+  .phrase-chip {
+    background: #fff; border: 2px solid #E8C282; border-bottom: 3px solid #C99A4E; border-radius: 10px;
+    padding: 8px 12px; font-size: 15px; font-weight: 700; color: var(--ink); cursor: pointer;
+    opacity: 0; transform: translateY(10px) scale(0.9);
+    animation: chip-in 0.4s ease-out forwards;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .phrase-chip:active { transform: translateY(1px) scale(0.97); }
+  .phrase-chip.confirmed { background: #dff5e4; border-color: #4CAF50; border-bottom-color: #379453; color: #1c5c3a; }
+  .phrase-chip.confirmed::after { content: ' ✓'; }
+  @keyframes chip-in { to { opacity: 1; transform: translateY(0) scale(1); } }
+  .sentence-box {
+    margin-top: 6px; background: #FFFBF0; border: 2px dashed #C99A4E; border-radius: 12px;
+    padding: 12px 16px; font-size: 15px; line-height: 1.6; max-width: 480px;
+    opacity: 0; animation: sentence-in 0.5s ease-out 0.7s forwards;
+  }
+  @keyframes sentence-in { to { opacity: 1; } }
+  .sentence-box b { color: var(--coral); font-size: 18px; }
+
+  #slide-nav { display: flex; gap: 10px; width: 100%; justify-content: center; }
+  #slide-gate { width: 100%; text-align: center; }
+  #slide-gate .btn { width: min(100%, 320px); }
+  #slide-gate-hint { font-size: 12px; color: var(--text-dim); margin-top: 8px; }
+  #slide-exit { margin-top: 6px; }
+
+  /* ---------- 游戏页（沿用 mario-game 原样式） ---------- */
+  #screen-game { padding: 0; display: none; }
+  #screen-game.active { display: block; }
+  #game-wrap { position: relative; width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; }
+  #game-container { width: 100%; height: 100%; }
+  canvas { display: block; touch-action: none; }
+
+  #quiz-overlay {
+    position: absolute; inset: 0;
+    background: rgba(6, 14, 22, 0.6);
+    display: none; align-items: center; justify-content: center;
+    z-index: 30;
+  }
+  #quiz-card {
+    width: min(88%, 440px);
+    background: linear-gradient(180deg, #FFF6DD, #FFE8AE);
+    border: 2px solid var(--gold);
+    box-shadow: 0 12px 0 rgba(150,90,10,0.35), 0 0 30px rgba(240,169,59,0.35);
+  }
+  #quiz-tag {
+    display: inline-block; background: #F0801F; color: #fff;
+    font-size: 11px; font-weight: 700; padding: 3px 12px; border-radius: 999px;
+    margin-bottom: 10px; letter-spacing: 1px;
+  }
+  #quiz-question { font-size: 20px; font-weight: 800; color: var(--ink); margin: 4px 0 16px; line-height: 1.4; }
+  #quiz-options { display: flex; flex-direction: column; gap: 9px; }
+  .quiz-opt {
+    background: #FFFBF0; color: var(--ink);
+    border: 2px solid #E8C282; border-bottom: 4px solid #C99A4E;
+    border-radius: 10px; padding: 12px 10px;
+    font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer;
+  }
+  .quiz-opt:active { border-bottom-width: 1px; transform: translateY(3px); }
+  .quiz-opt.correct { background: #dff5e4; border-color: #4CAF50; color: #1c5c3a; }
+  .quiz-opt.wrong { background: #fde0de; border-color: var(--coral); color: #8a2a20; }
+  .quiz-opt.selected {
+    border-color: #F0801F; background: #FFEBC2;
+    box-shadow: 0 0 0 3px rgba(240,128,31,0.35);
+  }
+  #quiz-key-hint { margin-top: 12px; font-size: 11px; color: #a87c40; }
+
+  #feedback-banner {
+    position: absolute; top: 14%; left: 50%;
+    transform: translateX(-50%) scale(0.6);
+    padding: 9px 24px; border-radius: 12px;
+    font-size: 20px; font-weight: 800; color: #fff;
+    opacity: 0; z-index: 40; pointer-events: none;
+    white-space: nowrap; box-shadow: 0 6px 0 rgba(0,0,0,0.25);
+  }
+  #feedback-banner.show { animation: banner-pop 1.1s ease-out forwards; }
+  @keyframes banner-pop {
+    0% { opacity: 0; transform: translateX(-50%) scale(0.4) translateY(10px); }
+    15% { opacity: 1; transform: translateX(-50%) scale(1.06) translateY(0); }
+    25% { transform: translateX(-50%) scale(1) translateY(0); }
+    80% { opacity: 1; }
+    100% { opacity: 0; transform: translateX(-50%) scale(1) translateY(-16px); }
+  }
+  #hint-toast {
+    position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.75); font-size: 11px;
+    background: rgba(0,0,0,0.32); padding: 5px 14px; border-radius: 999px;
+    z-index: 15; pointer-events: none;
+  }
+
+  /* ---------- 结算页 ---------- */
+  #screen-result .card { width: min(90%, 420px); }
+  #result-title { font-size: 26px; font-weight: 900; margin-bottom: 12px; }
+  #result-stats { font-size: 15px; color: #cfe8ee; line-height: 2; font-weight: 600; text-align: left; display: inline-block; margin-bottom: 16px; }
+  #result-msg { font-size: 13px; color: var(--text-dim); margin-bottom: 16px; line-height: 1.6; }
+  #result-actions { display: flex; flex-direction: column; gap: 10px; }
+
+  /* ---------- 排行榜页 ---------- */
+  #screen-board .card { width: min(94%, 560px); text-align: left; }
+  #board-title { font-size: 22px; font-weight: 900; color: #fff; text-align: center; margin-bottom: 4px; }
+  #board-sub { font-size: 12px; color: var(--text-dim); text-align: center; margin-bottom: 14px; }
+  #board-list { max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  .board-row { display: grid; grid-template-columns: 34px 1fr 50px 70px; align-items: center; gap: 10px;
+    background: #123246; border-radius: 10px; padding: 10px 12px; }
+  .board-rank { font-weight: 900; color: var(--text-dim); text-align: center; }
+  .board-name { font-weight: 800; color: #fff; font-size: 14px; }
+  .board-name span { display: block; font-size: 11px; color: var(--text-dim); font-weight: 600; }
+  .board-cls { font-size: 11px; color: var(--teal-light); font-weight: 700; text-align: center; }
+  .board-score { font-weight: 900; color: var(--gold-soft); text-align: right; font-size: 17px; }
+  .board-row.top1 { border: 2px solid var(--gold); }
+  .board-row.top2 { border: 2px solid var(--teal); }
+  .board-row.top3 { border: 2px solid var(--green); }
+  #board-empty { text-align: center; color: var(--text-dim); padding: 30px 0; font-size: 13px; }
+  #board-actions { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 1. 选班级 + 选姓名 -->
+  <div class="screen active" id="screen-select">
+    <div class="card">
+      <div id="select-title">量词大冒险</div>
+      <div id="select-sub">先选班级，再点自己的名字</div>
+      <div class="class-tabs" id="class-tabs"></div>
+      <div class="name-grid" id="name-grid"></div>
+      <button id="select-board-link">查看排行榜</button>
+    </div>
+  </div>
+
+  <!-- 2. 量词学习 Slides -->
+  <div class="screen" id="screen-slides">
+    <div id="slides-wrap">
+      <div id="slides-head">
+        <span id="slides-timer">已点读 0 / 102 个例子</span>
+        <span id="slides-progress">1 / 19</span>
+      </div>
+      <div id="slide-dots"></div>
+      <div id="slide-card"></div>
+      <div id="slide-nav">
+        <button class="btn secondary" id="slide-prev">← 上一页</button>
+        <button class="btn secondary" id="slide-next">下一页 →</button>
+      </div>
+      <div id="slide-gate">
+        <button class="btn gold" id="slide-gate-btn" disabled>请先看完全部资料</button>
+        <div id="slide-gate-hint">把每一个例子都点一下确认读过，才能进入游戏关卡</div>
+        <button class="btn secondary" id="slide-exit" style="margin-top:10px;">返回选人</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 游戏关卡（Phaser） -->
+  <div class="screen" id="screen-game">
+    <div id="game-wrap">
+      <div id="game-container"></div>
+      <div id="feedback-banner"></div>
+      <div id="hint-toast">方向键移动 · 空格跳跃（可连跳2次）· 答题时 ↑↓选答案 空格确定</div>
+      <div id="quiz-overlay">
+        <div id="quiz-card" class="card">
+          <span id="quiz-tag">一年级 · 华文 · 量词</span>
+          <div id="quiz-question">题目加载中…</div>
+          <div id="quiz-options"></div>
+          <div id="quiz-key-hint">↑ ↓ 选择答案 · Enter / 空格 确定</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 结算页 -->
+  <div class="screen" id="screen-result">
+    <div class="card">
+      <div id="result-title">结果</div>
+      <div id="result-stats"></div>
+      <div id="result-msg"></div>
+      <div id="result-actions"></div>
+    </div>
+  </div>
+
+  <!-- 5. 排行榜 -->
+  <div class="screen" id="screen-board">
+    <div class="card">
+      <div id="board-title">量词大冒险 · 排行榜</div>
+      <div id="board-sub">1I 班 · 1G 班 挑战成绩（历史最高分）</div>
+      <div id="board-list"><div id="board-empty">正在加载…</div></div>
+      <div id="board-actions">
+        <button class="btn secondary" id="board-refresh">刷新</button>
+        <button class="btn" id="board-back">返回</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   0. 班级名单（沿用《一年级华文闯关问答》同一份 1I / 1G 名单）
+   ============================================================ */
+const CLASSES = {
+  "1I": ["谢佳宸","钟乐鹏","王梓宇","颜杰森","何承傧","李铭澔","许宸赫","许志安","顾宇乐","赖军暤","林安晟","罗茂洋","黄凯轩","郭瑞杰","董乐","黄明泽","吴昱杰","刘伊祎","陈偌宁","钟畇乐","吴辰娜","吴钫淣","吴钫嗪","马颖婕","许昕宁","李雨瞳","林柃希","王菱敏","刘乐蒽","张敏晏","张恩珣","黄湘霖","冯馨敏","谢瑜晨","张乐妍"],
+  "1G": ["王煜勛","陈恩康","周宇轩","黄毅翔","杨伟皓","杨正宇","林锦喆","廖柏权","卢教炡","阿迪","玛丁","黄铭浚","谢宇恒","孙昊","陈有程","韦凯俊","尤辰瑞","余俊宏","徐语涵","黄欣怡","陳淑雯","谢淑惠","罗瑾棠","哈拿","张歆宁","何佳倩","罗楚恩","龚伊恩","黎馨雅","李嘉怡","陈乐妮","诺阿拉花","潘妤瑄","恺拉阿菲亚","施允熙","陈愉媗","叶禹彤"]
+};
+
+/* ============================================================
+   1. 量词学习内容 + 题库生成（一年级华文 5.3 认识各类词语 —— 量词）
+   ============================================================ */
+const WORDS = [
+  { char:'个', pinyin:'gè',   desc:'用于人或物', phrases:['苹果','月亮','孩子','西瓜','书包','同学'], sentence:'天上有一（ ）圆圆的月亮。' },
+  { char:'只', pinyin:'zhī',  desc:'常用于动物、小船等', phrases:['老虎','小猫','小鸟','鸭子','蝴蝶','小船'], sentence:'树上住着一（ ）可爱的小鸟。' },
+  { char:'颗', pinyin:'kē',   desc:'用于颗粒状或星状物', phrases:['星星','种子','豆子','糖果','葡萄','红豆'], sentence:'夜空中有很多（ ）亮星星。' },
+  { char:'群', pinyin:'qún',  desc:'用于成群的人或动物', phrases:['老虎','天鹅','小鸡','鸭子','燕子','孩子'], sentence:'草地上有一（ ）大白鹅在走动。' },
+  { char:'座', pinyin:'zuò',  desc:'用于较大或固定的物体', phrases:['大山','大桥','房子','亭子','天桥','灯塔'], sentence:'公路上有一（ ）高高的天桥。' },
+  { char:'枝', pinyin:'zhī',  desc:'用于带枝子的花或细长的杆状物', phrases:['桃花','梅花','柳条','红花','花儿','柳枝'], sentence:'春天到了，一（ ）桃花开了。' },
+  { char:'串', pinyin:'chuàn',desc:'用于连贯起来的东西', phrases:['葡萄','露珠','铃铛','珍珠','钥匙','肉丸'], sentence:'露珠可以穿成一大（ ）珍珠。' },
+  { char:'片', pinyin:'piàn', desc:'用于平而薄的东西', phrases:['叶子','面包','草地','花瓣','云彩','森林'], sentence:'地上飘落了一（ ）红叶子。' },
+  { char:'辆', pinyin:'liàng',desc:'用于车辆', phrases:['汽车','单车','货车','马车','校车','小车'], sentence:'爸爸买了一（ ）漂亮的新汽车。' },
+  { char:'架', pinyin:'jià',  desc:'用于机器或有支架的物品', phrases:['飞机','秋千','钢琴','梯子','相机','电扇'], sentence:'天上飞过三（ ）大飞机。' },
+  { char:'把', pinyin:'bǎ',   desc:'用于有柄的或手可以抓握的家具', phrases:['雨伞','椅子','尺子','剪刀','扇子','勺子'], sentence:'下雨了，我打开一（ ）大雨伞。' },
+  { char:'双', pinyin:'shuāng',desc:'用于成对的东西', phrases:['翅膀','鞋子','袜子','筷子','小手','眼睛'], sentence:'鸟儿有一（ ）美丽的翅膀。' },
+  { char:'朵', pinyin:'duǒ',  desc:'用于花或云彩', phrases:['小花','白云','浪花','荷花','红花','野花'], sentence:'水面上开了一（ ）小荷花。' },
+  { char:'条', pinyin:'tiáo', desc:'用于长条形的东西', phrases:['小鱼','小蛇','长绳','毛巾','马路','尾巴'], sentence:'这里的草丛里有一（ ）小蛇。' },
+  { char:'张', pinyin:'zhāng',desc:'用于纸、皮、面部或带平面的物体', phrases:['荷叶','笑脸','纸条','地图','书桌','大床'], sentence:'弟弟有一（ ）红红的笑脸。' },
+  { char:'间', pinyin:'jiān', desc:'用于房屋的最小单位', phrases:['房子','教室','小房','书房','厨房','卧室'], sentence:'我们坐在一（ ）大教室里读书。' },
+  { char:'家', pinyin:'jiā',  desc:'用于家庭或商店', phrases:['书店','商店','工厂','超市','饭馆','药店'], sentence:'这一（ ）商店卖很多好玩的玩具。' },
+];
+const CLASSIFIERS = WORDS.map(w => w.char);
+const ROUND_SIZE = 10;
+const PASS_RATE = 0.7;
+
+function shuffleArr(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildQuestionTemplates(){
+  const bank = [];
+  WORDS.forEach(w => {
+    w.phrases.forEach(noun => bank.push({ correct: w.char, template: `一（ ）${noun}。` }));
+    bank.push({ correct: w.char, template: w.sentence });
+  });
+  return bank;
+}
+const QUESTION_TEMPLATES = buildQuestionTemplates(); // 17 x 7 = 119 题
+
+function materializeQuestion(item){
+  const wrongs = shuffleArr(CLASSIFIERS.filter(c => c !== item.correct)).slice(0, 3);
+  const opts = shuffleArr([item.correct, ...wrongs]);
+  return { q: `量词运用：${item.template}`, options: opts, answer: opts.indexOf(item.correct) };
+}
+function drawRoundQuestions(){
+  return shuffleArr(QUESTION_TEMPLATES).slice(0, ROUND_SIZE).map(materializeQuestion);
+}
+
+/* ============================================================
+   2. 排行榜后端（阶段一：本机 localStorage 模拟；填了 API_URL 后自动切换成
+      共享后端 —— 部署方式见同资料夹 部署步骤.md + Code.gs）
+   ============================================================ */
+const API_URL = ''; // 部署好 Apps Script Web App 后，把网址贴在这里
+
+async function submitScoreToBackend(payload){
+  if (API_URL) {
+    try {
+      const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'submit', ...payload }) });
+      return await res.json();
+    } catch (e) { return { error: String(e) }; }
+  }
+  const key = 'liangci_leaderboard_fallback';
+  const list = JSON.parse(localStorage.getItem(key) || '[]');
+  const idx = list.findIndex(r => r.cls === payload.cls && r.name === payload.name);
+  if (idx === -1) {
+    list.push({ cls: payload.cls, name: payload.name, score: payload.score, attempts: 1 });
+  } else {
+    list[idx].score = Math.max(list[idx].score, payload.score);
+    list[idx].attempts += 1;
+  }
+  localStorage.setItem(key, JSON.stringify(list));
+  return { best: Math.max(payload.score, (list[idx] || {}).score || 0), attempts: (list[idx] || list[list.length-1]).attempts };
+}
+
+async function fetchLeaderboard(){
+  if (API_URL) {
+    try {
+      const res = await fetch(`${API_URL}?action=leaderboard`);
+      return await res.json();
+    } catch (e) { return []; }
+  }
+  const list = JSON.parse(localStorage.getItem('liangci_leaderboard_fallback') || '[]');
+  return list.sort((a, b) => b.score - a.score);
+}
+
+/* ============================================================
+   3. 画面切换
+   ============================================================ */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+let currentStudent = null; // { cls, name }
+
+/* ---- 3a. 选人 ---- */
+let pickedCls = Object.keys(CLASSES)[0];
+function renderClassTabs(){
+  const wrap = document.getElementById('class-tabs');
+  wrap.innerHTML = Object.keys(CLASSES).map(cls =>
+    `<button class="class-tab ${cls === pickedCls ? 'active' : ''}" data-cls="${cls}">${cls} 班</button>`
+  ).join('');
+  wrap.querySelectorAll('.class-tab').forEach(btn => btn.onclick = () => { pickedCls = btn.dataset.cls; renderClassTabs(); renderNameGrid(); });
+}
+function renderNameGrid(){
+  const wrap = document.getElementById('name-grid');
+  wrap.innerHTML = CLASSES[pickedCls].map(name => `<button class="name-btn" data-name="${name}">${name}</button>`).join('');
+  wrap.querySelectorAll('.name-btn').forEach(btn => btn.onclick = () => {
+    currentStudent = { cls: pickedCls, name: btn.dataset.name };
+    enterSlides('first');
+  });
+}
+document.getElementById('select-board-link').onclick = () => { showScreen('board'); loadBoard(); };
+renderClassTabs();
+renderNameGrid();
+
+/* ---- 3b. Slides 学习 ---- */
+let slideList = [];
+let slideIndex = 0;
+let slideMode = 'first'; // 'first'（第一次学习）｜ 'remedy'（答错太多被打回来重学）—— 门槛机制相同，只有提示文字不同
+let confirmedPhrases = new Set();
+const TOTAL_PHRASES = WORDS.reduce((sum, w) => sum + w.phrases.length, 0); // 17 x 6 = 102
+
+function buildSlideList(){
+  const list = [];
+  list.push({ type: 'intro' });
+  WORDS.forEach(w => list.push({ type: 'word', word: w }));
+  list.push({ type: 'outro' });
+  return list;
+}
+slideList = buildSlideList();
+
+function renderSlideCard(){
+  const item = slideList[slideIndex];
+  const card = document.getElementById('slide-card');
+  let html = '';
+  if (item.type === 'intro') {
+    html = `
+      <div class="slide-intro">
+        <h2>量词是什么？</h2>
+        <p>说数量的时候，数字后面通常要加一个「量词」，才能跟名词搭配，比如：</p>
+        <div class="demo-row">
+          <span class="demo-chip">一</span><span class="demo-chip op">+</span>
+          <span class="demo-chip">个</span><span class="demo-chip op">+</span>
+          <span class="demo-chip">苹果</span>
+        </div>
+        <p style="margin-top:14px;">不同的东西，配合的量词也不一样哦！接下来一起认识 17 个常用量词吧～</p>
+      </div>`;
+  } else if (item.type === 'outro') {
+    html = `
+      <div class="slide-outro">
+        <h2>你已经认识 17 个量词啦！</h2>
+        <div class="badge-grid">${WORDS.map(w => `<span class="badge">${w.char}</span>`).join('')}</div>
+        <p style="margin-top:14px;">准备好了吗？点完每一个例子之后，就可以进入游戏闯关，运用这些量词啦！</p>
+      </div>`;
+  } else {
+    const w = item.word;
+    const wordIdx = slideIndex - 1; // slide 0 是 intro，word 从 slide 1 开始
+    html = `
+      <div class="slide-word">
+        <div class="slide-char">${w.char}</div>
+        <div class="slide-pinyin">${w.pinyin}</div>
+        <div class="slide-desc">${w.desc}</div>
+        <div class="phrase-grid">
+          ${w.phrases.map((p, i) => {
+            const key = `${wordIdx}_${i}`;
+            const done = confirmedPhrases.has(key);
+            return `<span class="phrase-chip ${done ? 'confirmed' : ''}" data-key="${key}" style="animation-delay:${(i * 0.1).toFixed(2)}s">一${w.char}${p}</span>`;
+          }).join('')}
+        </div>
+        <div class="sentence-box">例句：${w.sentence.replace('（ ）', `<b>（${w.char}）</b>`)}</div>
+      </div>`;
+  }
+  card.innerHTML = html;
+  card.querySelectorAll('.phrase-chip').forEach(chip => {
+    chip.onclick = () => {
+      confirmedPhrases.add(chip.dataset.key);
+      chip.classList.add('confirmed');
+      updateSlidesHeader();
+      checkGateUnlock();
+    };
+  });
+
+  document.getElementById('slides-progress').textContent = `${slideIndex + 1} / ${slideList.length}`;
+  document.getElementById('slide-prev').disabled = slideIndex === 0;
+  const nextBtn = document.getElementById('slide-next');
+  nextBtn.disabled = slideIndex === slideList.length - 1;
+  renderDots();
+
+  // 小小节流：每页至少停留 0.8 秒才能按下一页，避免狂点跳过
+  nextBtn.dataset.locked = '1';
+  nextBtn.style.opacity = '0.5';
+  clearTimeout(renderSlideCard._t);
+  renderSlideCard._t = setTimeout(() => { nextBtn.dataset.locked = '0'; nextBtn.style.opacity = '1'; }, 800);
+}
+function renderDots(){
+  const wrap = document.getElementById('slide-dots');
+  wrap.innerHTML = slideList.map((_, i) =>
+    `<span class="dot ${i === slideIndex ? 'current' : ''} ${i <= slideIndex ? 'seen' : ''}"></span>`
+  ).join('');
+}
+function goSlide(delta){
+  const nextBtn = document.getElementById('slide-next');
+  if (delta > 0 && nextBtn.dataset.locked === '1') return;
+  const next = slideIndex + delta;
+  if (next < 0 || next >= slideList.length) return;
+  slideIndex = next;
+  renderSlideCard();
+}
+document.getElementById('slide-prev').onclick = () => goSlide(-1);
+document.getElementById('slide-next').onclick = () => goSlide(1);
+document.getElementById('slide-exit').onclick = () => showScreen('select');
+
+// 不管是第一次学习，还是答错太多被打回来重学，门槛都一样：
+// 把 17 个量词、102 个例子全部点一遍确认读过，没有时间限制。
+function enterSlides(mode){
+  slideMode = mode || 'first';
+  slideIndex = 0;
+  confirmedPhrases = new Set();
+  renderSlideCard();
+  showScreen('slides');
+  document.getElementById('slide-gate-hint').textContent = slideMode === 'remedy'
+    ? '答错的题目有点多，需要重新把每一个例子都点一遍确认读过，才能再挑战一次'
+    : '把每一个「一＿＿苹果」这样的例子都点一下，全部点完就能进入游戏关卡';
+  updateSlidesHeader();
+  checkGateUnlock();
+}
+function updateSlidesHeader(){
+  document.getElementById('slides-timer').textContent = `已点读 ${confirmedPhrases.size} / ${TOTAL_PHRASES} 个例子`;
+}
+function checkGateUnlock(){
+  const btn = document.getElementById('slide-gate-btn');
+  const done = confirmedPhrases.size;
+  const unlocked = done >= TOTAL_PHRASES;
+  btn.disabled = !unlocked;
+  btn.textContent = unlocked ? '开始闯关游戏 →' : `请点完每一个例子（已读 ${done}/${TOTAL_PHRASES}）`;
+}
+document.getElementById('slide-gate-btn').onclick = () => {
+  if (document.getElementById('slide-gate-btn').disabled) return;
+  startNewRound();
+};
+
+/* ---- 3c. 游戏 ---- */
+let gamePhaserInstance = null;
+window.studentName = '';
+
+function startNewRound(){
+  window.studentName = currentStudent ? `${currentStudent.name}（${currentStudent.cls}）` : '小朋友';
+  showScreen('game');
+  if (gamePhaserInstance) { gamePhaserInstance.destroy(true); gamePhaserInstance = null; }
+  window.__pendingRoundQuestions = drawRoundQuestions();
+  gamePhaserInstance = new Phaser.Game(buildPhaserConfig());
+  window.gamePhaserInstance = gamePhaserInstance;
+}
+
+window.onRoundEnd = function(stats){
+  showScreen('result');
+  renderResult(stats);
+  if (currentStudent) {
+    submitScoreToBackend({ cls: currentStudent.cls, name: currentStudent.name, score: stats.score });
+  }
+};
+
+/* ---- 3d. 结算 ---- */
+function renderResult(stats){
+  const total = stats.correctCount + stats.wrongCount;
+  const rate = total > 0 ? stats.correctCount / total : 0;
+  const passed = total > 0 && rate >= PASS_RATE;
+  const mm = String(Math.floor(stats.elapsedSec / 60)).padStart(2, '0');
+  const ss = String(stats.elapsedSec % 60).padStart(2, '0');
+
+  const title = document.getElementById('result-title');
+  title.textContent = passed ? '闯关成功！' : '还需要多学习一下～';
+  title.style.color = passed ? '#2fae66' : '#E8543F';
+
+  document.getElementById('result-stats').innerHTML = `
+    姓名：${currentStudent ? currentStudent.name + '（' + currentStudent.cls + '）' : ''}<br>
+    金币分数：${stats.score}<br>
+    答对：${stats.correctCount} 题 · 答错：${stats.wrongCount} 题<br>
+    正确率：${Math.round(rate * 100)}%（达标线 ${Math.round(PASS_RATE * 100)}%）<br>
+    用时：${mm}:${ss}
+  `;
+
+  const actions = document.getElementById('result-actions');
+  if (passed) {
+    document.getElementById('result-msg').textContent = '正确率达标，可以选择再玩一次，或者换一位同学。';
+    actions.innerHTML = `
+      <button class="btn gold" id="act-replay">再玩一次</button>
+      <button class="btn secondary" id="act-restudy">重新看资料</button>
+      <button class="btn secondary" id="act-board">查看排行榜</button>
+      <button class="btn secondary" id="act-switch">换一位同学</button>
+    `;
+    document.getElementById('act-replay').onclick = () => startNewRound();
+    document.getElementById('act-restudy').onclick = () => enterSlides('first');
+  } else {
+    document.getElementById('result-msg').textContent = '答错的题目有点多，需要重新把每一个量词例子都点一遍确认读过，才能再挑战一次。';
+    actions.innerHTML = `
+      <button class="btn gold" id="act-restudy">重新学习资料</button>
+      <button class="btn secondary" id="act-switch">换一位同学</button>
+    `;
+    document.getElementById('act-restudy').onclick = () => enterSlides('remedy');
+  }
+  const boardBtn = document.getElementById('act-board');
+  if (boardBtn) boardBtn.onclick = () => { showScreen('board'); loadBoard(); };
+  document.getElementById('act-switch').onclick = () => { currentStudent = null; showScreen('select'); };
+}
+
+/* ---- 3e. 排行榜 ---- */
+async function loadBoard(){
+  const listEl = document.getElementById('board-list');
+  listEl.innerHTML = '<div id="board-empty">正在加载…</div>';
+  const rows = await fetchLeaderboard();
+  if (!rows || !rows.length) {
+    listEl.innerHTML = '<div id="board-empty">还没有人交出成绩</div>';
+    return;
+  }
+  rows.sort((a, b) => b.score - a.score);
+  listEl.innerHTML = rows.map((r, i) => `
+    <div class="board-row ${i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : ''}">
+      <div class="board-rank">${i + 1}</div>
+      <div class="board-name">${r.name}<span>第 ${r.attempts || 1} 次挑战</span></div>
+      <div class="board-cls">${r.cls}</div>
+      <div class="board-score">${r.score}</div>
+    </div>
+  `).join('');
+}
+document.getElementById('board-refresh').onclick = loadBoard;
+document.getElementById('board-back').onclick = () => showScreen(currentStudent ? 'result' : 'select');
+
+/* ============================================================
+   4. Phaser 游戏本体（改编自 mario-game/index.html：
+      - 一轮固定 10 题（ROUND_SIZE），跑到终点旗杆或没命都会结束本轮
+      - 结束后不再自动进下一关，而是回调 window.onRoundEnd 交给外层结算
+   ============================================================ */
+let audioCtx;
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+function beep(freq, dur, type, vol, delay) {
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime + (delay || 0);
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type || 'square';
+  osc.frequency.setValueAtTime(freq, t0);
+  gain.gain.setValueAtTime(0, t0);
+  gain.gain.linearRampToValueAtTime(vol || 0.15, t0 + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.05);
+}
+function sfxJump() { beep(520, 0.12, 'square', 0.1); }
+function sfxHitBlock() { beep(300, 0.08, 'square', 0.12); }
+function sfxCorrect() { beep(523, 0.1, 'square', 0.14, 0); beep(659, 0.1, 'square', 0.14, 0.1); beep(784, 0.18, 'square', 0.16, 0.2); }
+function sfxWrong() { beep(220, 0.18, 'sawtooth', 0.14, 0); beep(160, 0.25, 'sawtooth', 0.14, 0.12); }
+function sfxCoin() { beep(988, 0.06, 'square', 0.12, 0); beep(1318, 0.12, 'square', 0.14, 0.06); }
+function sfxStomp() { beep(180, 0.1, 'square', 0.15, 0); beep(120, 0.14, 'square', 0.13, 0.08); }
+function sfxHurt() { beep(140, 0.22, 'sawtooth', 0.16, 0); }
+function sfxFall() { beep(400, 0.3, 'sine', 0.12, 0); beep(150, 0.3, 'sine', 0.1, 0.1); }
+
+const W = 960, H = 540;
+const SCALE = 2.4;
+const TILE = 16 * SCALE;
+const GROUND_Y = H - 90;
+
+const SEGMENTS = ROUND_SIZE; // 一轮 10 题 = 10 段关卡
+const SEGMENT_WIDTH = 620;
+const LEVEL_START_X = 300;
+const BLOCK_Y = GROUND_Y - TILE * 4.4; // 问答方块/砖块的高度
+const STATIONS = [];
+const PITS = [];
+const MONSTER_SPOTS = [];
+const SKY_MONSTER_SPOTS = [];
+const AMBIENT_COIN_SPOTS = [];
+
+for (let i = 0; i < SEGMENTS; i++) {
+  const segX = LEVEL_START_X + i * SEGMENT_WIDTH;
+  const bx = segX + 110 + TILE * 2.4;
+  STATIONS.push({ qx: segX + 110, bx });
+  MONSTER_SPOTS.push({ x: segX + 300, range: 90 });
+  SKY_MONSTER_SPOTS.push({ x: segX + 460, range: 110, baseY: BLOCK_Y - TILE * 2.4 });
+  // 中间那颗放在砖块正上方（明显在箱子上面，不会看起来卡进箱子里）
+  AMBIENT_COIN_SPOTS.push({ x: segX + 60, y: GROUND_Y - TILE * 1.6 });
+  AMBIENT_COIN_SPOTS.push({ x: bx, y: BLOCK_Y - TILE * 1.4 });
+  AMBIENT_COIN_SPOTS.push({ x: segX + 470, y: GROUND_Y - TILE * 1.6 });
+  if (i < SEGMENTS - 1) PITS.push([segX + 400, segX + 470]);
+}
+
+const STAIR_START_X = LEVEL_START_X + SEGMENTS * SEGMENT_WIDTH + 160;
+const STAIR_STEPS = 6;
+const STAIR_LAST_X = STAIR_START_X + (STAIR_STEPS - 1) * TILE;
+const GAP_START = STAIR_LAST_X + TILE;
+const GAP_END = GAP_START + TILE * 2.4;
+PITS.push([GAP_START, GAP_END]);
+const POLE_X = GAP_END + 90;
+const POLE_TOP_Y = GROUND_Y - TILE * 6.5;
+const LEVEL_WIDTH = POLE_X + 260;
+
+function inPit(x) {
+  return PITS.some(([a, b]) => x >= a - TILE / 4 && x <= b + TILE / 4);
+}
+
+class MainScene extends Phaser.Scene {
+  constructor() { super('main'); }
+
+  init(data) {
+    this.roundQuestions = window.__pendingRoundQuestions || [];
+  }
+
+  preload() {
+    this.load.atlas('atlas', 'assets/atlas.png', 'assets/atlas.json');
+    this.load.image('back', 'assets/back.png');
+    this.load.image('middle', 'assets/middle.png');
+    this.load.image('ground_tile', 'assets/ground_tile.png');
+    this.load.image('dirt_tile', 'assets/dirt_tile.png');
+  }
+
+  create() {
+    this.score = 0;
+    this.lives = 5;
+    this.correctCount = 0;
+    this.wrongCount = 0;
+    this.quizOpen = false;
+    this.invulnerableUntil = 0;
+    this.startTime = this.time.now;
+    this.finished = false;
+    this.gameOverFlag = false;
+    this._ended = false;
+    this.jumpsUsed = 0;
+    this.poleGrabbed = false;
+    this.lastSafeX = 140;
+
+    this.physics.world.setBounds(0, 0, LEVEL_WIDTH, H + 300);
+
+    this.backLayer = this.add.tileSprite(W/2, H/2, W, H, 'back').setScrollFactor(0).setTileScale(2.6, 2.6);
+    this.midLayer = this.add.tileSprite(W/2, H - 40, W, 420, 'middle').setOrigin(0.5, 1).setScrollFactor(0).setTileScale(2.1, 2.1);
+
+    this.makeBlockTextures();
+
+    this.groundGroup = this.physics.add.staticGroup();
+    for (let x = TILE/2; x < STAIR_START_X - TILE/2; x += TILE) {
+      if (inPit(x)) continue;
+      this.groundGroup.create(x, GROUND_Y + TILE/2, 'ground_tile').setScale(SCALE).refreshBody();
+      this.groundGroup.create(x, GROUND_Y + TILE*1.5, 'dirt_tile').setScale(SCALE).refreshBody();
+      this.add.image(x, GROUND_Y + TILE*2.5, 'dirt_tile').setScale(SCALE);
+    }
+
+    this.anims.create({ key: 'idle', frames: this.anims.generateFrameNames('atlas', { prefix: 'player/idle/player-idle-', start: 1, end: 4 }), frameRate: 6, repeat: -1 });
+    this.anims.create({ key: 'run', frames: this.anims.generateFrameNames('atlas', { prefix: 'player/run/player-run-', start: 1, end: 6 }), frameRate: 12, repeat: -1 });
+    this.anims.create({ key: 'jump', frames: this.anims.generateFrameNames('atlas', { prefix: 'player/jump/player-jump-', start: 1, end: 2 }), frameRate: 4, repeat: -1 });
+    this.anims.create({ key: 'gem-spin', frames: this.anims.generateFrameNames('atlas', { prefix: 'gem/gem-', start: 1, end: 5 }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: 'frog-idle', frames: this.anims.generateFrameNames('atlas', { prefix: 'frog/idle/frog-idle-', start: 1, end: 4 }), frameRate: 6, repeat: -1 });
+    this.anims.create({ key: 'eagle-fly', frames: this.anims.generateFrameNames('atlas', { prefix: 'eagle/eagle-attack-', start: 1, end: 4 }), frameRate: 8, repeat: -1 });
+    this.anims.create({ key: 'enemy-death', frames: this.anims.generateFrameNames('atlas', { prefix: 'enemy-death/enemy-death-', start: 1, end: 6 }), frameRate: 14, repeat: 0 });
+
+    this.blockGroup = this.physics.add.staticGroup();
+    STATIONS.forEach((st, i) => {
+      const y = GROUND_Y - TILE * 4.4;
+      const qBlock = this.blockGroup.create(st.qx, y, 'q_block').setScale(SCALE * 0.85).refreshBody();
+      qBlock.blockType = 'q';
+      qBlock.answered = false;
+      qBlock.qIndex = i;
+      qBlock.qMark = this.add.text(st.qx, y, '?', { fontFamily: 'Arial Black', fontSize: '22px', color: '#7a4a10', fontStyle: 'bold' }).setOrigin(0.5).setDepth(5);
+
+      const bBlock = this.blockGroup.create(st.bx, y, 'brick_block').setScale(SCALE * 0.85).refreshBody();
+      bBlock.blockType = 'b';
+
+      // 叠在上面那个比较矮的小箱子（纯装饰+可踩，跟下面的砖块紧贴不留缝）
+      const bBlockHeight = 40 * SCALE * 0.85;
+      const topScale = SCALE * 0.5;
+      const topHeight = 40 * topScale;
+      const topY = y - (bBlockHeight / 2 + topHeight / 2);
+      const topBlock = this.blockGroup.create(st.bx, topY, 'brick_block').setScale(topScale).refreshBody();
+      topBlock.blockType = 'b';
+    });
+
+    this.player = this.physics.add.sprite(140, GROUND_Y - 120, 'atlas', 'player/idle/player-idle-1');
+    this.player.setScale(SCALE);
+    this.player.setCollideWorldBounds(true);
+    this.player.body.setSize(16, 26).setOffset(9, 6);
+    this.player.setMaxVelocity(280, 900);
+    this.player.setDragX(1400);
+    this.player.play('idle');
+
+    this.physics.add.collider(this.player, this.groundGroup);
+    this.physics.add.collider(this.player, this.blockGroup, this.handleBlockCollide, undefined, this);
+
+    this.monsterGroup = this.physics.add.group({ allowGravity: true });
+    MONSTER_SPOTS.forEach(spot => {
+      const m = this.monsterGroup.create(spot.x, GROUND_Y - 40, 'atlas', 'frog/idle/frog-idle-1');
+      m.setScale(SCALE * 0.85);
+      m.play('frog-idle');
+      m.setCollideWorldBounds(false);
+      m.setVelocityX(45);
+      m.minX = spot.x - spot.range;
+      m.maxX = spot.x + spot.range;
+      m.alive = true;
+      m.body.setSize(14, 12).setOffset(9, 18);
+    });
+    this.physics.add.collider(this.monsterGroup, this.groundGroup);
+    this.physics.add.overlap(this.player, this.monsterGroup, this.handleMonsterOverlap, undefined, this);
+
+    // ---- 天上的怪兽（老鹰，飞行巡逻，不受地面碰撞影响）----
+    this.skyMonsterGroup = this.physics.add.group({ allowGravity: false });
+    SKY_MONSTER_SPOTS.forEach(spot => {
+      const m = this.skyMonsterGroup.create(spot.x, spot.baseY, 'atlas', 'eagle/eagle-attack-1');
+      m.setScale(SCALE * 0.8);
+      m.play('eagle-fly');
+      m.body.setAllowGravity(false);
+      m.setVelocityX(60);
+      m.minX = spot.x - spot.range;
+      m.maxX = spot.x + spot.range;
+      m.baseY = spot.baseY;
+      m.bobSeed = Phaser.Math.Between(0, 1000);
+      m.alive = true;
+      m.body.setSize(20, 14).setOffset(6, 8);
+    });
+    this.physics.add.overlap(this.player, this.skyMonsterGroup, this.handleMonsterOverlap, undefined, this);
+
+    this.coinPickups = this.physics.add.group({ allowGravity: false, immovable: true });
+    AMBIENT_COIN_SPOTS.forEach(spot => {
+      if (inPit(spot.x)) return;
+      const coin = this.coinPickups.create(spot.x, spot.y, 'atlas', 'gem/gem-1');
+      coin.setScale(SCALE * 0.7);
+      coin.body.setAllowGravity(false);
+      coin.play('gem-spin');
+      this.tweens.add({ targets: coin, y: spot.y - 8, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: Phaser.Math.Between(0, 400) });
+    });
+    this.physics.add.overlap(this.player, this.coinPickups, this.collectAmbientCoin, undefined, this);
+
+    this.cameras.main.setBounds(0, 0, LEVEL_WIDTH, H);
+    this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
+    this.cameras.main.setDeadzone(140, H);
+    this.physics.world.gravity.y = 1600;
+
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.keys = this.input.keyboard.addKeys('W,A,S,D,SPACE');
+    this.input.keyboard.on('keydown-UP', () => this.moveQuizSelection(-1));
+    this.input.keyboard.on('keydown-DOWN', () => this.moveQuizSelection(1));
+    this.input.keyboard.on('keydown-W', () => this.moveQuizSelection(-1));
+    this.input.keyboard.on('keydown-S', () => this.moveQuizSelection(1));
+    this.input.keyboard.on('keydown-ENTER', () => this.confirmQuizSelection());
+
+    this.buildHUD();
+    this.buildEnding();
+  }
+
+  makeBlockTextures() {
+    const g = this.add.graphics();
+    g.fillStyle(0xb5762a, 1); g.fillRoundedRect(0, 0, 40, 40, 4);
+    g.fillStyle(0xe0a34a, 1); g.fillRoundedRect(3, 3, 34, 34, 3);
+    g.generateTexture('q_block', 40, 40);
+    g.clear();
+    g.fillStyle(0x7a4030, 1); g.fillRoundedRect(0, 0, 40, 40, 4);
+    g.fillStyle(0xa8583e, 1); g.fillRoundedRect(3, 3, 34, 34, 3);
+    g.lineStyle(2, 0x7a4030, 1);
+    g.strokeRect(3, 3, 16, 16); g.strokeRect(21, 3, 16, 16);
+    g.strokeRect(3, 21, 16, 16); g.strokeRect(21, 21, 16, 16);
+    g.generateTexture('brick_block', 40, 40);
+    g.destroy();
+  }
+
+  buildHUD() {
+    const hud = this.add.container(0, 0).setScrollFactor(0).setDepth(100);
+
+    const leftBg = this.add.rectangle(96, 40, 190, 76, 0x0B1E2D, 0.55).setOrigin(0.5).setStrokeStyle(2, 0x0EA5B7, 0.6);
+    this.nameText = this.add.text(16, 12, `${window.studentName || '小朋友'}`, { fontSize: '13px', color: '#ffffff', fontStyle: 'bold' });
+    const coinIcon = this.add.sprite(30, 40, 'atlas', 'gem/gem-1').setScale(1.8);
+    coinIcon.play('gem-spin');
+    this.scoreText = this.add.text(50, 30, '0', { fontSize: '24px', color: '#ffffff', fontStyle: 'bold' });
+    this.answeredText = this.add.text(16, 60, `答对 0 / 答错 0 · 共${ROUND_SIZE}题`, { fontSize: '12px', color: '#8fb9c9' });
+
+    const rightBg = this.add.rectangle(W - 96, 32, 190, 58, 0x0B1E2D, 0.55).setOrigin(0.5).setStrokeStyle(2, 0x0EA5B7, 0.6);
+    this.heartIcons = [];
+    for (let i = 0; i < 5; i++) {
+      const t = this.add.text(W - 178 + i * 22, 12, i < this.lives ? '♥' : '♡', { fontSize: '20px', color: i < this.lives ? '#ff5566' : '#4a5a63' });
+      this.heartIcons.push(t);
+    }
+    this.timeText = this.add.text(W - 178, 38, '00:00', { fontSize: '13px', color: '#8fb9c9', fontStyle: 'bold' });
+
+    hud.add([leftBg, this.nameText, coinIcon, this.scoreText, this.answeredText, rightBg, this.timeText, ...this.heartIcons]);
+  }
+
+  buildEnding() {
+    this.stairGroup = this.physics.add.staticGroup();
+    for (let i = 0; i < STAIR_STEPS; i++) {
+      const stepX = STAIR_START_X + i * TILE;
+      const stepHeight = i + 1;
+      for (let h = 0; h < stepHeight; h++) {
+        const stepY = GROUND_Y + TILE/2 - h * TILE;
+        this.stairGroup.create(stepX, stepY, 'ground_tile').setScale(SCALE).refreshBody();
+      }
+    }
+    this.physics.add.collider(this.player, this.stairGroup);
+
+    const poleGfx = this.add.graphics();
+    poleGfx.fillStyle(0xB0B8C0, 1);
+    poleGfx.fillRect(POLE_X - 3, POLE_TOP_Y, 6, GROUND_Y + TILE/2 - POLE_TOP_Y);
+    this.add.triangle(POLE_X + 3, POLE_TOP_Y + 20, 0, 0, 26, 8, 0, 16, 0x0EA5B7).setOrigin(0, 0.5);
+
+    this.poleZone = this.add.zone(POLE_X, (POLE_TOP_Y + GROUND_Y + TILE/2) / 2, 30, (GROUND_Y + TILE/2 - POLE_TOP_Y));
+    this.physics.add.existing(this.poleZone, true);
+    this.physics.add.overlap(this.player, this.poleZone, this.handlePoleGrab, undefined, this);
+
+    this.add.text(POLE_X + 90, GROUND_Y - 30, '终点', { fontSize: '16px', color: '#2fae66', fontStyle: 'bold' }).setOrigin(0.5);
+  }
+
+  handlePoleGrab(player, zone) {
+    if (this.poleGrabbed || this.gameOverFlag) return;
+    this.poleGrabbed = true;
+    this.finished = true;
+
+    const t = Phaser.Math.Clamp(1 - (player.y - POLE_TOP_Y) / (GROUND_Y + TILE/2 - POLE_TOP_Y), 0, 1);
+    let bonus, label;
+    if (t >= 0.85) { bonus = 80; label = '旗杆顶端！'; }
+    else if (t >= 0.65) { bonus = 50; label = '非常高！'; }
+    else if (t >= 0.45) { bonus = 30; label = '很不错！'; }
+    else if (t >= 0.2) { bonus = 15; label = '还可以再高一点～'; }
+    else { bonus = 5; label = '到达终点'; }
+
+    this.score += bonus;
+    this.updateHUD();
+    sfxCorrect();
+    this.showBanner(`${label} +${bonus} · 挑战完成！`, '#0EA5B7');
+
+    this.player.body.setVelocity(0, 0);
+    this.player.body.allowGravity = false;
+    this.player.x = POLE_X;
+    this.physics.world.pause();
+    this.tweens.add({
+      targets: this.player, y: GROUND_Y - 30, duration: 500, ease: 'Cubic.easeIn',
+      onComplete: () => { this.time.delayedCall(700, () => this.endRound('finished')); }
+    });
+  }
+
+  handleBlockCollide(player, block) {
+    if (this.quizOpen) return;
+    if (block.blockType === 'q' && !block.answered && player.body.touching.up) {
+      block.answered = true;
+      sfxHitBlock();
+      const origY = block.y;
+      this.tweens.add({ targets: block, y: origY - 10, duration: 90, yoyo: true, ease: 'Quad.easeOut' });
+      if (block.qMark) this.tweens.add({ targets: block.qMark, y: origY - 10, duration: 90, yoyo: true });
+      this.openQuiz(block);
+    } else if (block.blockType === 'b' && player.body.touching.up) {
+      const origY = block.y;
+      this.tweens.add({ targets: block, y: origY - 6, duration: 70, yoyo: true, ease: 'Quad.easeOut' });
+      beep(240, 0.06, 'square', 0.08);
+    }
+  }
+
+  openQuiz(block) {
+    this.quizOpen = true;
+    this.physics.pause();
+    const q = this.roundQuestions[block.qIndex] || { q: '（题目缺失）', options: ['-','-','-','-'], answer: 0 };
+    const overlay = document.getElementById('quiz-overlay');
+    const qText = document.getElementById('quiz-question');
+    const optsWrap = document.getElementById('quiz-options');
+    qText.textContent = q.q;
+    optsWrap.innerHTML = '';
+    q.options.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'quiz-opt';
+      btn.textContent = opt;
+      btn.onclick = () => this.answerQuiz(i === q.answer, block, btn, optsWrap);
+      optsWrap.appendChild(btn);
+    });
+    overlay.style.display = 'flex';
+    this.quizOptions = Array.from(optsWrap.children);
+    this.quizSelectedIndex = 0;
+    this.updateQuizSelection();
+  }
+
+  updateQuizSelection() {
+    if (!this.quizOptions) return;
+    this.quizOptions.forEach((el, i) => el.classList.toggle('selected', i === this.quizSelectedIndex));
+  }
+
+  moveQuizSelection(delta) {
+    if (!this.quizOpen || !this.quizOptions || !this.quizOptions.length) return;
+    beep(660, 0.04, 'square', 0.06);
+    this.quizSelectedIndex = (this.quizSelectedIndex + delta + this.quizOptions.length) % this.quizOptions.length;
+    this.updateQuizSelection();
+  }
+
+  confirmQuizSelection() {
+    if (!this.quizOpen || !this.quizOptions || !this.quizOptions.length) return;
+    const el = this.quizOptions[this.quizSelectedIndex];
+    if (el) el.click();
+  }
+
+  resetMovementKeyStates() {
+    if (this.cursors) { this.cursors.up && this.cursors.up.reset(); this.cursors.down && this.cursors.down.reset(); }
+    if (this.keys) { this.keys.SPACE && this.keys.SPACE.reset(); this.keys.W && this.keys.W.reset(); this.keys.S && this.keys.S.reset(); }
+  }
+
+  answerQuiz(isCorrect, block, btnEl, optsWrap) {
+    Array.from(optsWrap.children).forEach(b => b.onclick = null);
+    btnEl.classList.add(isCorrect ? 'correct' : 'wrong');
+
+    setTimeout(() => {
+      document.getElementById('quiz-overlay').style.display = 'none';
+      this.physics.resume();
+      this.quizOpen = false;
+      this.quizOptions = null;
+      this.resetMovementKeyStates();
+
+      if (isCorrect) {
+        this.correctCount++;
+        this.score += 10;
+        sfxCorrect();
+        this.showBanner('答对了！+10 金币', '#2fae66');
+        if (block.qMark) block.qMark.destroy();
+        block.setTexture('brick_block');
+        this.spawnCoinPop(block.x, block.y);
+      } else {
+        this.wrongCount++;
+        sfxWrong();
+        this.showBanner('答错了，再接再厉～', '#b8433a');
+        if (block.qMark) block.qMark.destroy();
+        this.tweens.add({ targets: block, alpha: 0.25, duration: 150, yoyo: true, repeat: 1, onComplete: () => block.setTexture('brick_block').setAlpha(1) });
+      }
+      this.updateHUD();
+    }, 550);
+  }
+
+  spawnCoinPop(x, y) {
+    const coin = this.add.sprite(x, y - 20, 'atlas', 'gem/gem-1').setScale(SCALE * 0.6);
+    coin.play('gem-spin');
+    this.tweens.add({
+      targets: coin, y: y - 60, alpha: 0, scale: SCALE * 0.9, duration: 600, ease: 'Cubic.easeOut',
+      onStart: () => sfxCoin(), onComplete: () => coin.destroy()
+    });
+  }
+
+  collectAmbientCoin(player, coin) {
+    if (!coin.active) return;
+    coin.disableBody(true, true);
+    this.score += 2;
+    sfxCoin();
+    this.updateHUD();
+    for (let i = 0; i < 4; i++) {
+      const spark = this.add.circle(coin.x, coin.y, 3, 0xFFE066);
+      const ang = (Math.PI * 2 * i) / 4;
+      this.tweens.add({ targets: spark, x: coin.x + Math.cos(ang) * 22, y: coin.y + Math.sin(ang) * 22, alpha: 0, duration: 320, ease: 'Cubic.easeOut', onComplete: () => spark.destroy() });
+    }
+  }
+
+  handleMonsterOverlap(player, monster) {
+    if (!monster.alive || this.quizOpen) return;
+    const stomp = player.body.velocity.y > 0 && (player.y + 10) < monster.y;
+    if (stomp) {
+      monster.alive = false;
+      sfxStomp();
+      this.player.setVelocityY(-360);
+      monster.body.setVelocity(0, 0);
+      monster.body.enable = false;
+      monster.play('enemy-death');
+      this.score += 5;
+      this.showBanner('消灭怪物！+5', '#0EA5B7');
+      this.spawnCoinPop(monster.x, monster.y);
+      this.updateHUD();
+      monster.once('animationcomplete', () => monster.destroy());
+    } else if (this.time.now > this.invulnerableUntil) {
+      this.invulnerableUntil = this.time.now + 900;
+      sfxHurt();
+      const dir = player.x < monster.x ? -1 : 1;
+      this.player.setVelocity(dir * 180, -260);
+      this.player.setTint(0xff8888);
+      this.time.delayedCall(400, () => this.player.clearTint());
+      this.loseLife('哎呀，被怪物撞到了！');
+    }
+  }
+
+  loseLife(message) {
+    if (this.gameOverFlag || this.finished) return;
+    this.lives--;
+    const idx = this.lives;
+    if (this.heartIcons[idx]) {
+      this.heartIcons[idx].setText('♡').setColor('#4a5a63');
+      this.tweens.add({ targets: this.heartIcons[idx], scale: 1.3, duration: 150, yoyo: true, ease: 'Quad.easeOut' });
+    }
+    if (this.lives <= 0) {
+      this.showBanner(message || '没命了…', '#b8433a');
+      this.time.delayedCall(300, () => this.gameOver());
+    } else {
+      this.showBanner(`${message || '受伤了'}（剩 ${this.lives} 条命）`, '#b8433a');
+    }
+  }
+
+  gameOver() {
+    if (this.gameOverFlag) return;
+    this.gameOverFlag = true;
+    this.physics.pause();
+    this.endRound('gameover');
+  }
+
+  endRound(reason) {
+    if (this._ended) return;
+    this._ended = true;
+    const elapsedSec = Math.floor((this.time.now - this.startTime) / 1000);
+    const stats = { score: this.score, correctCount: this.correctCount, wrongCount: this.wrongCount, reason, elapsedSec };
+    this.time.delayedCall(reason === 'finished' ? 400 : 300, () => {
+      if (gamePhaserInstance) { gamePhaserInstance.destroy(true); gamePhaserInstance = null; }
+      window.onRoundEnd(stats);
+    });
+  }
+
+  showBanner(msg, color) {
+    const el = document.getElementById('feedback-banner');
+    el.textContent = msg;
+    el.style.background = color;
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.classList.add('show');
+  }
+
+  updateHUD() {
+    this.scoreText.setText(String(this.score));
+    this.answeredText.setText(`答对 ${this.correctCount} / 答错 ${this.wrongCount} · 共${ROUND_SIZE}题`);
+  }
+
+  update(time) {
+    if (this.gameOverFlag || this.finished) return;
+
+    const elapsed = Math.floor((time - this.startTime) / 1000);
+    const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+    const ss = String(elapsed % 60).padStart(2, '0');
+    if (this.timeText) this.timeText.setText(`${mm}:${ss}`);
+
+    if (this.quizOpen) { this.player.setVelocityX(0); return; }
+
+    if (this.player.body.blocked.down) this.lastSafeX = this.player.x;
+    if (this.player.y > H + 100) {
+      sfxFall();
+      this.player.setPosition(Math.max(140, this.lastSafeX - 60), GROUND_Y - 120);
+      this.player.setVelocity(0, 0);
+      this.loseLife('掉进坑里了！');
+    }
+
+    const left = this.cursors.left.isDown || this.keys.A.isDown;
+    const right = this.cursors.right.isDown || this.keys.D.isDown;
+    const jumpPressed = Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.keys.SPACE) || Phaser.Input.Keyboard.JustDown(this.keys.W);
+    const onGround = this.player.body.blocked.down || this.player.body.touching.down;
+
+    if (left && !right) { this.player.setVelocityX(-190); this.player.setFlipX(true); }
+    else if (right && !left) { this.player.setVelocityX(190); this.player.setFlipX(false); }
+    else this.player.setVelocityX(0);
+
+    if (onGround) this.jumpsUsed = 0;
+    if (jumpPressed && this.jumpsUsed < 2) {
+      this.player.setVelocityY(this.jumpsUsed === 0 ? -560 : -460);
+      this.jumpsUsed++;
+      sfxJump();
+    }
+
+    if (!onGround) this.player.play('jump', true);
+    else if (Math.abs(this.player.body.velocity.x) > 10) this.player.play('run', true);
+    else this.player.play('idle', true);
+
+    const camX = this.cameras.main.scrollX;
+    this.backLayer.tilePositionX = camX * 0.08;
+    this.midLayer.tilePositionX = camX * 0.35;
+
+    this.monsterGroup.children.iterate(m => {
+      if (!m || !m.active || !m.alive) return;
+      if (m.x <= m.minX) m.setVelocityX(45);
+      else if (m.x >= m.maxX) m.setVelocityX(-45);
+      m.setFlipX(m.body.velocity.x < 0);
+    });
+
+    this.skyMonsterGroup.children.iterate(m => {
+      if (!m || !m.active || !m.alive) return;
+      if (m.x <= m.minX) m.setVelocityX(60);
+      else if (m.x >= m.maxX) m.setVelocityX(-60);
+      m.setFlipX(m.body.velocity.x < 0);
+      m.y = m.baseY + Math.sin((time + m.bobSeed) * 0.003) * 14; // 飞行时轻轻上下浮动
+    });
+  }
+}
+
+function buildPhaserConfig(){
+  ensureAudio();
+  return {
+    type: Phaser.AUTO,
+    parent: 'game-container',
+    width: W,
+    height: H,
+    backgroundColor: '#7fd1e8',
+    pixelArt: true,
+    physics: { default: 'arcade', arcade: { gravity: { y: 1600 }, debug: false } },
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    scene: [MainScene]
+  };
+}
+</script>
+</body>
+</html>
