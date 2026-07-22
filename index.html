@@ -727,10 +727,14 @@ function generateLevelLayout(){
     const stepX = stepOnLeft ? qx - TILE * 1.5 : bx + TILE * 1.5;
     STEP_SPOTS.push({ x: stepX, y: stepY });
 
-    // 地面怪物：段内位置、巡逻范围、初始方向都随机
+    // 地面怪物：段内位置、巡逻范围、初始方向都随机，但巡逻右边界要卡在坑洞前面留出安全缓冲，
+    // 不然怪物会一路巡逻到坑边把玩家一直撞回去、变成卡关（踩坑记录见 PROGRESS.md）
+    const monsterX = segX + 220 + Math.random() * 80; // 220~300
+    const monsterMaxX = Math.min(monsterX + (70 + Math.random() * 50), segX + 370);
     MONSTER_SPOTS.push({
-      x: segX + 260 + Math.random() * 80,
-      range: 70 + Math.random() * 50,
+      x: monsterX,
+      minX: monsterX - (60 + Math.random() * 40),
+      maxX: monsterMaxX,
       dir: Math.random() < 0.5 ? 1 : -1,
     });
 
@@ -854,8 +858,8 @@ class MainScene extends Phaser.Scene {
       m.play('frog-idle');
       m.setCollideWorldBounds(false);
       m.setVelocityX(45 * spot.dir);
-      m.minX = spot.x - spot.range;
-      m.maxX = spot.x + spot.range;
+      m.minX = spot.minX;
+      m.maxX = spot.maxX;
       m.alive = true;
       m.body.setSize(14, 12).setOffset(9, 18);
     });
