@@ -720,11 +720,15 @@ function generateLevelLayout(){
     STATIONS.push({ qx, bx, y });
 
     // 垫脚的矮箱子：放在大箱子「旁边的下面」（左边或右边随机），比大箱子矮一截，
-    // 当作台阶，玩家可以先跳上这个矮箱子，再跳上大箱子
+    // 当作台阶，玩家可以先跳上这个矮箱子，再跳上大箱子。
+    // 高度封顶在 2.0 个 TILE 以内（单跳理论极限约 2.55 个 TILE）——不能让它跟着
+    // 主方块的高度（3.6～5.0）等比例升高，不然主方块抽到 5.0 时垫脚箱自己会高到
+    // 2.4～3.0 个 TILE，超过单跳能力，变成怎么跳都上不去（踩坑记录，见 PROGRESS.md）
     const stepOnLeft = Math.random() < 0.5;
-    const stepHeightTiles = Math.max(1.0, heightTiles - 2.0 - Math.random() * 0.6);
+    const stepHeightTiles = Math.min(2.0, Math.max(1.0, heightTiles - 3.0 + Math.random() * 0.4));
     const stepY = GROUND_Y - TILE * stepHeightTiles;
-    const stepX = stepOnLeft ? qx - TILE * 1.5 : bx + TILE * 1.5;
+    // 跟主方块间距要留够（两个箱子实际宽度加起来约 2.07 个 TILE），不然会物理重叠
+    const stepX = stepOnLeft ? qx - TILE * 2.3 : bx + TILE * 2.3;
     STEP_SPOTS.push({ x: stepX, y: stepY });
 
     // 地面怪物：段内位置、巡逻范围、初始方向都随机，但巡逻右边界要卡在坑洞前面留出安全缓冲，
