@@ -23,12 +23,38 @@ function doPost(e) {
   try { payload = JSON.parse(e.postData.contents); } catch (err) { return jsonOut({ error: 'bad payload' }); }
 
   if (payload.action === 'submit') {
-    return jsonOut(submitScore(payload));
+    const validated = validateSubmission(payload);
+    if (validated.error) return jsonOut(validated);
+    return jsonOut(submitScore(validated));
   }
-  if (payload.action === 'clear') {
-    return jsonOut({ cleared: clearScores() });
-  }
+  // 'clear' 不接受公开的网页请求——任何人都能对着这个 Web App 网址发 POST，
+  // 公开清空会让排行榜随时被恶意清空。要清空只能到 Apps Script 编辑器里手动
+  // 执行 clearScores()，不透过这个入口。
   return jsonOut({ error: 'unknown action' });
+}
+
+// ------------------------------------------------------------------------
+// 白名单验证：cls 只接受班级名单里的值，name 只接受对应班级名单里的真实姓名，
+// score 限制在合理范围内的整数——避免任何人绕过前端直接对 API 发伪造成绩、
+// 或用姓名字段塞入攻击字符串。跟 index.html 里的 CLASSES 保持同一份名单，
+// 前端加/减学生时记得这边也要同步更新。
+// ------------------------------------------------------------------------
+const CLASSES = {
+  '1I': ['谢佳宸','钟乐鹏','王梓宇','颜杰森','何承傧','李铭澔','许宸赫','许志安','顾宇乐','赖军暤','林安晟','罗茂洋','黄凯轩','郭瑞杰','董乐','黄明泽','吴昱杰','刘伊祎','陈偌宁','钟畇乐','吴辰娜','吴钫淣','吴钫嗪','马颖婕','许昕宁','李雨瞳','林柃希','王菱敏','刘乐蒽','张敏晏','张恩珣','黄湘霖','冯馨敏','谢瑜晨','张乐妍'],
+  '1G': ['王煜勛','陈恩康','周宇轩','黄毅翔','杨伟皓','杨正宇','林锦喆','廖柏权','卢教炡','阿迪','玛丁','黄铭浚','谢宇恒','孙昊','陈有程','韦凯俊','尤辰瑞','余俊宏','徐语涵','黄欣怡','陳淑雯','谢淑惠','罗瑾棠','哈拿','张歆宁','何佳倩','罗楚恩','龚伊恩','黎馨雅','李嘉怡','陈乐妮','诺阿拉花','潘妤瑄','恺拉阿菲亚','施允熙','陈愉媗','叶禹彤'],
+};
+const MAX_SCORE = 300; // 10 题 x 10 分 + 旗杆最高 80 分奖励，留一点余裕；超过这个数一定是伪造
+
+function validateSubmission(payload) {
+  const cls = payload.cls;
+  const name = payload.name;
+  const score = Number(payload.score);
+  if (!CLASSES[cls]) return { error: 'invalid class' };
+  if (CLASSES[cls].indexOf(name) === -1) return { error: 'invalid name' };
+  if (!Number.isFinite(score) || score < 0 || score > MAX_SCORE || !Number.isInteger(score)) {
+    return { error: 'invalid score' };
+  }
+  return { cls: cls, name: name, score: score };
 }
 
 function jsonOut(obj) {

@@ -17,8 +17,11 @@
     background: var(--bg);
     font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
     overflow: hidden;
-    touch-action: none;
   }
+  /* touch-action:none 只在游戏画面用（挡掉滑动手势跟 Phaser 的按键/点击操作打架），
+     不能放在 html/body 全局——放在全局会连累选人页/学习页手机也滑不动，例如学习页
+     实测高度常常超过手机视口，用户被卡在页面下半段的按钮按不到（踩坑记录见 PROGRESS.md） */
+  #screen-game { touch-action: none; }
   #app { position: relative; width: 100%; height: 100vh; }
   .screen {
     position: absolute; inset: 0; display: none;
@@ -432,14 +435,27 @@ function shuffleArr(arr){
 }
 
 function buildQuestionTemplates(){
+  // 有些名词在不只一个量词底下都出现过（例如「葡萄」配「颗」是一颗葡萄、配「串」是一串
+  // 葡萄，两个都对）。这在学习卡片里没问题、是正常的一词多量词用法；但拿裸模板
+  // 「一（ ）葡萄。」直接出选择题就会有两个都算对的答案，所以这种名词不能拿来出题
+  // （学习卡片两边都还留着，只是跳过出题）
+  const nounToWords = {};
+  WORDS.forEach(w => w.phrases.forEach(noun => {
+    (nounToWords[noun] = nounToWords[noun] || []).push(w.char);
+  }));
+  const ambiguousNouns = new Set(Object.keys(nounToWords).filter(n => nounToWords[n].length > 1));
+
   const bank = [];
   WORDS.forEach(w => {
-    w.phrases.forEach(noun => bank.push({ correct: w.char, template: `一（ ）${noun}。` }));
+    w.phrases.forEach(noun => {
+      if (ambiguousNouns.has(noun)) return;
+      bank.push({ correct: w.char, template: `一（ ）${noun}。` });
+    });
     bank.push({ correct: w.char, template: w.sentence });
   });
   return bank;
 }
-const QUESTION_TEMPLATES = buildQuestionTemplates(); // 17 x 7 = 119 题
+const QUESTION_TEMPLATES = buildQuestionTemplates();
 
 function materializeQuestion(item){
   const wrongs = shuffleArr(CLASSIFIERS.filter(c => c !== item.correct)).slice(0, 3);
@@ -705,7 +721,9 @@ window.onRoundEnd = function(stats){
 function renderResult(stats){
   const total = stats.correctCount + stats.wrongCount;
   const rate = total > 0 ? stats.correctCount / total : 0;
-  const passed = total > 0 && rate >= PASS_RATE;
+  // 一定要 10 题都答完才能算达标——不然可以只答对 1 题、故意跳过其余 9 题直接冲去
+  // 旗杆，正确率照样算 100%
+  const passed = total === ROUND_SIZE && rate >= PASS_RATE;
   const mm = String(Math.floor(stats.elapsedSec / 60)).padStart(2, '0');
   const ss = String(stats.elapsedSec % 60).padStart(2, '0');
 
@@ -733,7 +751,9 @@ function renderResult(stats){
     document.getElementById('act-replay').onclick = () => startNewRound();
     document.getElementById('act-restudy').onclick = () => enterSlides('first');
   } else {
-    document.getElementById('result-msg').textContent = '答错的题目有点多，需要重新把每一个量词例子都点一遍确认读过，才能再挑战一次。';
+    document.getElementById('result-msg').textContent = total < ROUND_SIZE
+      ? `这一轮还有 ${ROUND_SIZE - total} 题没有作答，要把 ${ROUND_SIZE} 题都答完才算完成，需要重新把每一个量词例子都点一遍确认读过，才能再挑战一次。`
+      : '答错的题目有点多，需要重新把每一个量词例子都点一遍确认读过，才能再挑战一次。';
     actions.innerHTML = `
       <button class="btn gold" id="act-restudy">重新学习资料</button>
       <button class="btn secondary" id="act-switch">换一位同学</button>
@@ -755,14 +775,35 @@ async function loadBoard(){
     return;
   }
   rows.sort((a, b) => b.score - a.score);
-  listEl.innerHTML = rows.map((r, i) => `
-    <div class="board-row ${i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : ''}">
-      <div class="board-rank">${i + 1}</div>
-      <div class="board-name">${r.name}<span>第 ${r.attempts || 1} 次挑战</span></div>
-      <div class="board-cls">${r.cls}</div>
-      <div class="board-score">${r.score}</div>
-    </div>
-  `).join('');
+  // 用 textContent 逐一组装 DOM，不要把后端资料拼进 innerHTML——排行榜姓名/班级
+  // 是从共享后端读回来的，理论上任何人都能提交，拼字符串会有存储型 XSS 风险
+  listEl.innerHTML = '';
+  rows.forEach((r, i) => {
+    const row = document.createElement('div');
+    row.className = 'board-row' + (i === 0 ? ' top1' : i === 1 ? ' top2' : i === 2 ? ' top3' : '');
+
+    const rank = document.createElement('div');
+    rank.className = 'board-rank';
+    rank.textContent = String(i + 1);
+
+    const nameCell = document.createElement('div');
+    nameCell.className = 'board-name';
+    nameCell.appendChild(document.createTextNode(String(r.name)));
+    const attemptsSpan = document.createElement('span');
+    attemptsSpan.textContent = `第 ${r.attempts || 1} 次挑战`;
+    nameCell.appendChild(attemptsSpan);
+
+    const cls = document.createElement('div');
+    cls.className = 'board-cls';
+    cls.textContent = String(r.cls);
+
+    const score = document.createElement('div');
+    score.className = 'board-score';
+    score.textContent = String(r.score);
+
+    row.append(rank, nameCell, cls, score);
+    listEl.appendChild(row);
+  });
 }
 document.getElementById('board-refresh').onclick = loadBoard;
 document.getElementById('board-back').onclick = () => showScreen(currentStudent ? 'result' : 'select');
