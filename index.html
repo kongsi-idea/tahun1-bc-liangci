@@ -53,6 +53,42 @@
   .btn.warn { background: linear-gradient(180deg, #ef8a6a, var(--coral)); border-bottom-color: #8a2a20; }
   .btn.gold { background: linear-gradient(180deg, #ffd873, var(--gold)); border-bottom-color: #96650f; color: #4a2f06; }
 
+  /* ---------- 开始页（像素风主题页） ---------- */
+  #screen-title { background: radial-gradient(circle at 50% 20%, #1a3d54, var(--bg)); }
+  #title-card {
+    width: min(92%, 480px); text-align: center; background: none; border: none;
+    box-shadow: none; padding: 0; animation: pop-in 0.4s ease-out;
+  }
+  .title-decor { display: flex; justify-content: center; gap: 14px; margin-bottom: 18px; }
+  .pixel-block {
+    width: 52px; height: 52px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 900; color: #7a4a10;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.35);
+    animation: block-float 2.2s ease-in-out infinite;
+  }
+  .pixel-block.q-deco { background: linear-gradient(180deg, #F0A93B, #c9861f); }
+  .pixel-block.brick-deco {
+    background: linear-gradient(180deg, #a8583e, #7a4030);
+    background-image:
+      linear-gradient(180deg, #a8583e, #7a4030),
+      linear-gradient(0deg, transparent 49%, #7a4030 49%, #7a4030 51%, transparent 51%),
+      linear-gradient(90deg, transparent 49%, #7a4030 49%, #7a4030 51%, transparent 51%);
+  }
+  .title-decor .pixel-block:nth-child(2) { animation-delay: 0.3s; }
+  .title-decor .pixel-block:nth-child(3) { animation-delay: 0.6s; }
+  @keyframes block-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+  #title-heading {
+    font-size: 44px; font-weight: 900; color: #fff; margin: 0 0 8px;
+    letter-spacing: 2px;
+    text-shadow: 3px 3px 0 var(--teal), 6px 6px 0 rgba(0,0,0,0.3);
+  }
+  #title-sub { font-size: 14px; color: var(--text-dim); margin-bottom: 30px; font-weight: 700; }
+  #title-start-btn { font-size: 20px; padding: 18px 40px; animation: start-btn-pulse 1.6s ease-in-out infinite; }
+  @keyframes start-btn-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+  #title-hint { margin-top: 18px; font-size: 12px; color: var(--text-dim); }
+
   /* ---------- 选人页 ---------- */
   #screen-select .card { width: min(92%, 560px); }
   #select-title { font-size: 26px; font-weight: 900; color: #fff; margin-bottom: 4px; }
@@ -80,63 +116,88 @@
     font-size: 12px; text-decoration: underline; cursor: pointer; font-family: inherit;
   }
 
-  /* ---------- Slides 学习页 ---------- */
+  /* ---------- Slides 学习页（一年级适用：字体整体放大约一倍，卡片更大更活泼） ---------- */
   #screen-slides { padding: 16px; }
-  #slides-wrap { width: min(94%, 620px); display: flex; flex-direction: column; align-items: center; gap: 14px; }
-  #slides-head { width: 100%; display: flex; justify-content: space-between; align-items: center; color: var(--text-dim); font-size: 12px; font-weight: 700; }
+  #slides-wrap { width: min(96%, 760px); display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  #slides-head { width: 100%; display: flex; justify-content: space-between; align-items: center; color: var(--text-dim); font-size: 20px; font-weight: 700; }
   #slides-timer { color: var(--gold-soft); }
-  #slide-dots { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; max-width: 100%; }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: #2c4c5c; }
+  #slide-dots { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: 100%; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: #2c4c5c; }
   .dot.seen { background: var(--teal); }
   .dot.current { background: var(--gold); transform: scale(1.4); }
 
   #slide-card {
-    width: 100%; min-height: 340px;
-    background: linear-gradient(180deg, #FFF6DD, #FFE8AE);
-    border: 2px solid var(--gold); border-radius: 18px;
-    box-shadow: 0 12px 0 rgba(150,90,10,0.35), 0 0 30px rgba(240,169,59,0.3);
-    padding: 26px 22px; color: var(--ink);
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    width: 100%; min-height: 460px;
+    background: linear-gradient(180deg, var(--card-bg1, #FFF6DD), var(--card-bg2, #FFE8AE));
+    border: 3px solid var(--card-border, var(--gold)); border-radius: 24px;
+    box-shadow: 0 14px 0 rgba(150,90,10,0.35), 0 0 36px rgba(240,169,59,0.3);
+    padding: 36px 28px; color: var(--ink);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    transition: background 0.25s, border-color 0.25s;
   }
   .slide-intro, .slide-outro { text-align: center; }
-  .slide-intro h2, .slide-outro h2 { font-size: 22px; margin: 0 0 10px; }
-  .slide-intro p, .slide-outro p { font-size: 15px; line-height: 1.7; margin: 0; }
-  .demo-row { display: flex; gap: 8px; align-items: center; justify-content: center; margin-top: 14px; font-size: 20px; font-weight: 900; flex-wrap: wrap; }
-  .demo-chip { background: #fff; border: 2px solid var(--gold); border-radius: 10px; padding: 8px 14px; }
-  .demo-chip.op { border: none; background: none; font-size: 22px; }
-  .badge-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; max-width: 480px; }
-  .badge { width: 40px; height: 40px; border-radius: 10px; background: #fff; border: 2px solid var(--gold);
-    display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; }
+  .slide-intro h2, .slide-outro h2 { font-size: 40px; margin: 0 0 16px; }
+  .slide-intro p, .slide-outro p { font-size: 26px; line-height: 1.7; margin: 0; }
+  .demo-row { display: flex; gap: 12px; align-items: center; justify-content: center; margin-top: 20px; font-size: 34px; font-weight: 900; flex-wrap: wrap; }
+  .demo-chip { background: #fff; border: 3px solid var(--gold); border-radius: 14px; padding: 12px 20px; }
+  .demo-chip.op { border: none; background: none; font-size: 36px; }
+  .badge-grid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 16px; max-width: 560px; }
+  .badge { width: 62px; height: 62px; border-radius: 14px; background: #fff; border: 3px solid var(--gold);
+    display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 900; }
 
-  .slide-char { font-size: 64px; font-weight: 900; line-height: 1; animation: char-pop 0.5s ease-out; }
-  @keyframes char-pop { from { transform: scale(0.4) rotate(-8deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
-  .slide-pinyin { font-size: 18px; font-weight: 700; color: #a87c40; }
-  .slide-desc { font-size: 14px; color: #8a6a3a; margin-bottom: 4px; }
-  .phrase-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 480px; }
+  .slide-char {
+    font-size: 110px; font-weight: 900; line-height: 1;
+    animation: char-pop 0.6s ease-out, char-idle-bounce 2s ease-in-out 0.6s infinite;
+  }
+  @keyframes char-pop {
+    0% { transform: scale(0.3) rotate(-14deg); opacity: 0; }
+    55% { transform: scale(1.15) rotate(6deg); opacity: 1; }
+    75% { transform: scale(0.94) rotate(-3deg); }
+    100% { transform: scale(1) rotate(0); }
+  }
+  @keyframes char-idle-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  .slide-pinyin { font-size: 30px; font-weight: 700; color: #a87c40; }
+  .slide-desc { font-size: 22px; color: #8a6a3a; margin-bottom: 6px; }
+  .phrase-grid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; max-width: 560px; }
   .phrase-chip {
-    background: #fff; border: 2px solid #E8C282; border-bottom: 3px solid #C99A4E; border-radius: 10px;
-    padding: 8px 12px; font-size: 15px; font-weight: 700; color: var(--ink); cursor: pointer;
+    background: #fff; border: 3px solid #E8C282; border-bottom: 5px solid #C99A4E; border-radius: 14px;
+    padding: 14px 20px; font-size: 26px; font-weight: 700; color: var(--ink); cursor: pointer;
     opacity: 0; transform: translateY(10px) scale(0.9);
     animation: chip-in 0.4s ease-out forwards;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
   .phrase-chip:active { transform: translateY(1px) scale(0.97); }
-  .phrase-chip.confirmed { background: #dff5e4; border-color: #4CAF50; border-bottom-color: #379453; color: #1c5c3a; }
+  .phrase-chip.confirmed {
+    background: #dff5e4; border-color: #4CAF50; border-bottom-color: #379453; color: #1c5c3a;
+    opacity: 1; transform: translateY(0) scale(1);
+    animation: chip-confirm-pop 0.45s ease-out;
+  }
   .phrase-chip.confirmed::after { content: ' ✓'; }
   @keyframes chip-in { to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes chip-confirm-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.2) rotate(-3deg); }
+    70% { transform: scale(0.95) rotate(2deg); }
+    100% { transform: scale(1) rotate(0); }
+  }
   .sentence-box {
-    margin-top: 6px; background: #FFFBF0; border: 2px dashed #C99A4E; border-radius: 12px;
-    padding: 12px 16px; font-size: 15px; line-height: 1.6; max-width: 480px;
+    margin-top: 8px; background: #FFFBF0; border: 3px dashed #C99A4E; border-radius: 16px;
+    padding: 16px 20px; font-size: 24px; line-height: 1.6; max-width: 560px;
     opacity: 0; animation: sentence-in 0.5s ease-out 0.7s forwards;
   }
-  @keyframes sentence-in { to { opacity: 1; } }
-  .sentence-box b { color: var(--coral); font-size: 18px; }
+  @keyframes sentence-in {
+    0% { opacity: 0; transform: translateY(10px) scale(0.96); }
+    60% { opacity: 1; transform: translateY(-3px) scale(1.02); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .sentence-box b { color: var(--coral); font-size: 30px; }
 
-  #slide-nav { display: flex; gap: 10px; width: 100%; justify-content: center; }
+  #slide-nav { display: flex; gap: 12px; width: 100%; justify-content: center; }
   #slide-gate { width: 100%; text-align: center; }
-  #slide-gate .btn { width: min(100%, 320px); }
-  #slide-gate-hint { font-size: 12px; color: var(--text-dim); margin-top: 8px; }
-  #slide-exit { margin-top: 6px; }
+  #slide-gate .btn { width: min(100%, 360px); }
+  #slide-gate-hint { font-size: 18px; color: var(--text-dim); margin-top: 10px; }
+  #slide-exit { margin-top: 8px; }
+  #screen-slides .btn { font-size: 20px; padding: 16px 22px; }
 
   /* ---------- 游戏页（沿用 mario-game 原样式） ---------- */
   #screen-game { padding: 0; display: none; }
@@ -169,14 +230,20 @@
     border: 2px solid #E8C282; border-bottom: 4px solid #C99A4E;
     border-radius: 10px; padding: 12px 10px;
     font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer;
+    transition: transform 0.1s;
   }
   .quiz-opt:active { border-bottom-width: 1px; transform: translateY(3px); }
+  /* 四个选项各给一种颜色，上下键切换时才看得出选到哪一个 */
+  .quiz-opt.opt-0 { background: #E1F0FF; border-color: #4A90D9; border-bottom-color: #2C6CB0; color: #1b3a5c; }
+  .quiz-opt.opt-1 { background: #FFE6F0; border-color: #E85D8A; border-bottom-color: #B83D68; color: #6b1d3a; }
+  .quiz-opt.opt-2 { background: #E5F7E7; border-color: #4CAF50; border-bottom-color: #2e7d34; color: #1c5c3a; }
+  .quiz-opt.opt-3 { background: #F3E5FF; border-color: #9B59B6; border-bottom-color: #7d3f99; color: #4a2060; }
+  .quiz-opt.selected {
+    box-shadow: 0 0 0 4px #FFD700, 0 0 16px rgba(255,215,0,0.6);
+    transform: scale(1.04);
+  }
   .quiz-opt.correct { background: #dff5e4; border-color: #4CAF50; color: #1c5c3a; }
   .quiz-opt.wrong { background: #fde0de; border-color: var(--coral); color: #8a2a20; }
-  .quiz-opt.selected {
-    border-color: #F0801F; background: #FFEBC2;
-    box-shadow: 0 0 0 3px rgba(240,128,31,0.35);
-  }
   #quiz-key-hint { margin-top: 12px; font-size: 11px; color: #a87c40; }
 
   #feedback-banner {
@@ -231,11 +298,26 @@
 <body>
 <div id="app">
 
+  <!-- 0. 开始页（像素风主题页） -->
+  <div class="screen active" id="screen-title">
+    <div id="title-card">
+      <div class="title-decor">
+        <div class="pixel-block q-deco">?</div>
+        <div class="pixel-block brick-deco"></div>
+        <div class="pixel-block q-deco">?</div>
+      </div>
+      <h1 id="title-heading">量词大冒险</h1>
+      <div id="title-sub">一年级华文 · 5.3 认识各类词语 —— 量词</div>
+      <button class="btn gold" id="title-start-btn">开始游戏 →</button>
+      <div id="title-hint">点亮方块、收集金币，闯关认识 17 个量词！</div>
+    </div>
+  </div>
+
   <!-- 1. 选班级 + 选姓名 -->
-  <div class="screen active" id="screen-select">
+  <div class="screen" id="screen-select">
     <div class="card">
       <div id="select-title">量词大冒险</div>
-      <div id="select-sub">先选班级，再点自己的名字</div>
+      <div id="select-sub">先选班级，再点自己的名字（其他学校可选「不选名字」直接开始）</div>
       <div class="class-tabs" id="class-tabs"></div>
       <div class="name-grid" id="name-grid"></div>
       <button id="select-board-link">查看排行榜</button>
@@ -246,7 +328,7 @@
   <div class="screen" id="screen-slides">
     <div id="slides-wrap">
       <div id="slides-head">
-        <span id="slides-timer">已点读 0 / 102 个例子</span>
+        <span id="slides-timer">已点读 0 / 51 个例子</span>
         <span id="slides-progress">1 / 19</span>
       </div>
       <div id="slide-dots"></div>
@@ -415,17 +497,27 @@ function showScreen(id){
 
 let currentStudent = null; // { cls, name }
 
+document.getElementById('title-start-btn').onclick = () => { showScreen('select'); };
+
 /* ---- 3a. 选人 ---- */
+// 第三个选项 GUEST：不选名字直接开始，方便其他学校借用这个游戏时不需要维护班级名单
+const GUEST_KEY = 'GUEST';
 let pickedCls = Object.keys(CLASSES)[0];
 function renderClassTabs(){
   const wrap = document.getElementById('class-tabs');
-  wrap.innerHTML = Object.keys(CLASSES).map(cls =>
-    `<button class="class-tab ${cls === pickedCls ? 'active' : ''}" data-cls="${cls}">${cls} 班</button>`
+  const tabs = [...Object.keys(CLASSES), GUEST_KEY];
+  wrap.innerHTML = tabs.map(cls =>
+    `<button class="class-tab ${cls === pickedCls ? 'active' : ''}" data-cls="${cls}">${cls === GUEST_KEY ? '不选名字' : cls + ' 班'}</button>`
   ).join('');
   wrap.querySelectorAll('.class-tab').forEach(btn => btn.onclick = () => { pickedCls = btn.dataset.cls; renderClassTabs(); renderNameGrid(); });
 }
 function renderNameGrid(){
   const wrap = document.getElementById('name-grid');
+  if (pickedCls === GUEST_KEY) {
+    wrap.innerHTML = `<button class="btn gold" id="guest-start-btn" style="grid-column:1/-1;">不选名字，直接开始 →</button>`;
+    document.getElementById('guest-start-btn').onclick = () => { currentStudent = null; enterSlides('first'); };
+    return;
+  }
   wrap.innerHTML = CLASSES[pickedCls].map(name => `<button class="name-btn" data-name="${name}">${name}</button>`).join('');
   wrap.querySelectorAll('.name-btn').forEach(btn => btn.onclick = () => {
     currentStudent = { cls: pickedCls, name: btn.dataset.name };
@@ -441,7 +533,19 @@ let slideList = [];
 let slideIndex = 0;
 let slideMode = 'first'; // 'first'（第一次学习）｜ 'remedy'（答错太多被打回来重学）—— 门槛机制相同，只有提示文字不同
 let confirmedPhrases = new Set();
-const TOTAL_PHRASES = WORDS.reduce((sum, w) => sum + w.phrases.length, 0); // 17 x 6 = 102
+// 每个量词只需点 3 个例子（原本 6 个太多），一年级小朋友点完不会太累
+const SLIDE_PHRASES_PER_WORD = 3;
+const TOTAL_PHRASES = WORDS.length * SLIDE_PHRASES_PER_WORD; // 17 x 3 = 51
+
+// 每个量词卡片轮换一种颜色主题，卡片之间的颜色不再千篇一律
+const SLIDE_THEMES = [
+  { bg1: '#FFF6DD', bg2: '#FFE8AE', border: '#F0A93B', ink: '#5A3B1E' }, // 暖金
+  { bg1: '#E6FBEF', bg2: '#C3F0D6', border: '#2FAE66', ink: '#1c5c3a' }, // 薄荷绿
+  { bg1: '#E6F4FF', bg2: '#C2E3FF', border: '#3A8FD9', ink: '#1b3a5c' }, // 天空蓝
+  { bg1: '#FFEDE3', bg2: '#FFD1B8', border: '#E8703F', ink: '#7a2f10' }, // 蜜桃橙
+  { bg1: '#F5E9FF', bg2: '#E1C2FF', border: '#9B59B6', ink: '#4a2060' }, // 薰衣草紫
+  { bg1: '#FFE8EF', bg2: '#FFC2D6', border: '#E85D8A', ink: '#6b1d3a' }, // 玫瑰粉
+];
 
 function buildSlideList(){
   const list = [];
@@ -478,13 +582,14 @@ function renderSlideCard(){
   } else {
     const w = item.word;
     const wordIdx = slideIndex - 1; // slide 0 是 intro，word 从 slide 1 开始
+    const shownPhrases = w.phrases.slice(0, SLIDE_PHRASES_PER_WORD);
     html = `
       <div class="slide-word">
         <div class="slide-char">${w.char}</div>
         <div class="slide-pinyin">${w.pinyin}</div>
         <div class="slide-desc">${w.desc}</div>
         <div class="phrase-grid">
-          ${w.phrases.map((p, i) => {
+          ${shownPhrases.map((p, i) => {
             const key = `${wordIdx}_${i}`;
             const done = confirmedPhrases.has(key);
             return `<span class="phrase-chip ${done ? 'confirmed' : ''}" data-key="${key}" style="animation-delay:${(i * 0.1).toFixed(2)}s">一${w.char}${p}</span>`;
@@ -494,6 +599,18 @@ function renderSlideCard(){
       </div>`;
   }
   card.innerHTML = html;
+  if (item.type === 'word') {
+    const theme = SLIDE_THEMES[(slideIndex - 1) % SLIDE_THEMES.length];
+    card.style.setProperty('--card-bg1', theme.bg1);
+    card.style.setProperty('--card-bg2', theme.bg2);
+    card.style.setProperty('--card-border', theme.border);
+    card.style.setProperty('--ink', theme.ink);
+  } else {
+    card.style.removeProperty('--card-bg1');
+    card.style.removeProperty('--card-bg2');
+    card.style.removeProperty('--card-border');
+    card.style.removeProperty('--ink');
+  }
   card.querySelectorAll('.phrase-chip').forEach(chip => {
     chip.onclick = () => {
       confirmedPhrases.add(chip.dataset.key);
@@ -534,7 +651,7 @@ document.getElementById('slide-next').onclick = () => goSlide(1);
 document.getElementById('slide-exit').onclick = () => showScreen('select');
 
 // 不管是第一次学习，还是答错太多被打回来重学，门槛都一样：
-// 把 17 个量词、102 个例子全部点一遍确认读过，没有时间限制。
+// 把 17 个量词、51 个例子全部点一遍确认读过，没有时间限制。
 function enterSlides(mode){
   slideMode = mode || 'first';
   slideIndex = 0;
@@ -698,6 +815,7 @@ let STATIONS = [];
 let PITS = [];
 let MONSTER_SPOTS = [];
 let SKY_MONSTER_SPOTS = [];
+let STEP_SPOTS = [];
 let AMBIENT_COIN_SPOTS = [];
 let STAIR_START_X, STAIR_LAST_X, GAP_START, GAP_END, POLE_X, POLE_TOP_Y, LEVEL_WIDTH;
 
@@ -706,7 +824,7 @@ function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 // 每次开新的一轮都重新生成一次关卡布局：问答方块高度、怪兽位置/方向/高度、垫脚小箱子
 // 位置都会变化，避免每一段关卡长得一模一样、玩起来太单调。
 function generateLevelLayout(){
-  STATIONS = []; PITS = []; MONSTER_SPOTS = []; SKY_MONSTER_SPOTS = []; AMBIENT_COIN_SPOTS = [];
+  STATIONS = []; PITS = []; MONSTER_SPOTS = []; SKY_MONSTER_SPOTS = []; STEP_SPOTS = []; AMBIENT_COIN_SPOTS = [];
 
   for (let i = 0; i < SEGMENTS; i++) {
     const segX = LEVEL_START_X + i * SEGMENT_WIDTH;
@@ -718,8 +836,25 @@ function generateLevelLayout(){
     const bx = qx + TILE * 2.2 + Math.random() * 20;
     STATIONS.push({ qx, bx, y });
 
-    // 垫脚的矮箱子暂时移除——两轮调整（等比例升高导致跳不上去、封顶高度后仍反馈卡关）
-    // 都没能让手感稳定，先拿掉，下次再重新设计（见 PROGRESS.md 踩坑记录）
+    // 垫脚的矮箱子：高度用固定安全值，不再跟着主方块高度用公式换算（前两版都用公式算，
+    // 边界情况仍会跳不上去）。单跳安全上限抓 1.7 个 TILE（理论极限约 2.55，留出余裕给
+    // 小朋友按键不够精准）。问答方块只有 3.6／4.4／5.0 三档固定高度：
+    //   3.6、4.4 档：铺 1 层垫脚箱（1.7 TILE 高）就能垫到安全跳跃距离内
+    //   5.0 档（最高）：铺 2 层楼梯（1.7 → 3.4 TILE），每一层间距都在安全跳跃范围内，
+    //   固定摆在 bx 右边（往坑洞方向留了充足距离，不会占用到坑洞位置）
+    const SAFE_HOP = 1.7;
+    let firstStepX, firstStepY;
+    if (heightTiles >= 5.0) {
+      const baseX = bx + TILE * 2.3;
+      firstStepX = baseX; firstStepY = GROUND_Y - TILE * SAFE_HOP;
+      STEP_SPOTS.push({ x: firstStepX, y: firstStepY });
+      STEP_SPOTS.push({ x: baseX + TILE * 1.6, y: GROUND_Y - TILE * SAFE_HOP * 2 });
+    } else {
+      const stepOnLeft = Math.random() < 0.5;
+      firstStepX = stepOnLeft ? qx - TILE * 2.3 : bx + TILE * 2.3;
+      firstStepY = GROUND_Y - TILE * SAFE_HOP;
+      STEP_SPOTS.push({ x: firstStepX, y: firstStepY });
+    }
 
     // 地面怪物：段内位置、巡逻范围、初始方向都随机，但巡逻右边界要卡在坑洞前面留出安全缓冲，
     // 不然怪物会一路巡逻到坑边把玩家一直撞回去、变成卡关（踩坑记录见 PROGRESS.md）
@@ -741,7 +876,7 @@ function generateLevelLayout(){
     });
 
     AMBIENT_COIN_SPOTS.push({ x: segX + 40 + Math.random() * 30, y: GROUND_Y - TILE * 1.6 });
-    AMBIENT_COIN_SPOTS.push({ x: segX + 260 + Math.random() * 30, y: GROUND_Y - TILE * 1.6 });
+    AMBIENT_COIN_SPOTS.push({ x: firstStepX, y: firstStepY - TILE * 1.3 }); // 鼓励玩家跳上垫脚箱
     AMBIENT_COIN_SPOTS.push({ x: segX + 490 + Math.random() * 30, y: GROUND_Y - TILE * 1.6 });
 
     if (i < SEGMENTS - 1) PITS.push([segX + 400, segX + 470]);
@@ -806,6 +941,14 @@ class MainScene extends Phaser.Scene {
       this.groundGroup.create(x, GROUND_Y + TILE*1.5, 'dirt_tile').setScale(SCALE).refreshBody();
       this.add.image(x, GROUND_Y + TILE*2.5, 'dirt_tile').setScale(SCALE);
     }
+    // 楼梯本身、还有楼梯前那段坑洞（GAP_START~GAP_END）不铺地面是故意的，但坑洞跳过去
+    // 之后、旗杆终点那一段之前完全没有铺——之前漏掉了，画面空空一片，也没有地板可以站
+    // （踩坑记录见 PROGRESS.md）
+    for (let x = GAP_END + TILE/2; x < LEVEL_WIDTH; x += TILE) {
+      this.groundGroup.create(x, GROUND_Y + TILE/2, 'ground_tile').setScale(SCALE).refreshBody();
+      this.groundGroup.create(x, GROUND_Y + TILE*1.5, 'dirt_tile').setScale(SCALE).refreshBody();
+      this.add.image(x, GROUND_Y + TILE*2.5, 'dirt_tile').setScale(SCALE);
+    }
 
     this.anims.create({ key: 'idle', frames: this.anims.generateFrameNames('atlas', { prefix: 'player/idle/player-idle-', start: 1, end: 4 }), frameRate: 6, repeat: -1 });
     this.anims.create({ key: 'run', frames: this.anims.generateFrameNames('atlas', { prefix: 'player/run/player-run-', start: 1, end: 6 }), frameRate: 12, repeat: -1 });
@@ -828,6 +971,15 @@ class MainScene extends Phaser.Scene {
       bBlock.blockType = 'b';
     });
 
+    // 垫脚的矮箱子：在大箱子旁边、比较低的地方，玩家可以先跳上这个，再跳上大箱子。
+    // blockType 用 'step'（不是 'b'）——垫脚箱做成「只能从上面踩」的单向平台，
+    // 玩家从旁边走过或往上跳时会直接穿过，不会被它挡住变成一堵墙（踩坑记录见 PROGRESS.md：
+    // 之前当成一般实心方块，箱子底部矮到跟玩家头顶差不多高，正好卡在地面通道正中间，
+    // 双跳没接好就会被弹开卡在原地过不去）
+    STEP_SPOTS.forEach(spot => {
+      const stepBlock = this.blockGroup.create(spot.x, spot.y, 'brick_block').setScale(SCALE * 0.6).refreshBody();
+      stepBlock.blockType = 'step';
+    });
 
     this.player = this.physics.add.sprite(140, GROUND_Y - 120, 'atlas', 'player/idle/player-idle-1');
     this.player.setScale(SCALE);
@@ -838,7 +990,7 @@ class MainScene extends Phaser.Scene {
     this.player.play('idle');
 
     this.physics.add.collider(this.player, this.groundGroup);
-    this.physics.add.collider(this.player, this.blockGroup, this.handleBlockCollide, undefined, this);
+    this.physics.add.collider(this.player, this.blockGroup, this.handleBlockCollide, this.processBlockCollision, this);
 
     this.monsterGroup = this.physics.add.group({ allowGravity: true });
     MONSTER_SPOTS.forEach(spot => {
@@ -988,6 +1140,13 @@ class MainScene extends Phaser.Scene {
     });
   }
 
+  // 垫脚箱（'step'）做成单向平台：只有玩家从上方落下、快要踩到箱顶时才当作实心地板，
+  // 从旁边走过或从下面往上跳都直接穿过去，不会被它挡住（踩坑记录见 PROGRESS.md）
+  processBlockCollision(player, block) {
+    if (block.blockType !== 'step') return true;
+    return player.body.velocity.y >= 0 && (player.body.bottom - block.body.top) <= 10;
+  }
+
   handleBlockCollide(player, block) {
     if (this.quizOpen) return;
     if (block.blockType === 'q' && !block.answered && player.body.touching.up) {
@@ -1015,7 +1174,7 @@ class MainScene extends Phaser.Scene {
     optsWrap.innerHTML = '';
     q.options.forEach((opt, i) => {
       const btn = document.createElement('button');
-      btn.className = 'quiz-opt';
+      btn.className = `quiz-opt opt-${i}`;
       btn.textContent = opt;
       btn.onclick = () => this.answerQuiz(i === q.answer, block, btn, optsWrap);
       optsWrap.appendChild(btn);
