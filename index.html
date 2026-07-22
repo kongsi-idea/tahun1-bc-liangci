@@ -571,6 +571,7 @@ function startNewRound(){
   showScreen('game');
   if (gamePhaserInstance) { gamePhaserInstance.destroy(true); gamePhaserInstance = null; }
   window.__pendingRoundQuestions = drawRoundQuestions();
+  generateLevelLayout(); // 每一轮重新生成关卡布局，避免每次都长得一样
   gamePhaserInstance = new Phaser.Game(buildPhaserConfig());
   window.gamePhaserInstance = gamePhaserInstance;
 }
@@ -690,35 +691,74 @@ const GROUND_Y = H - 90;
 const SEGMENTS = ROUND_SIZE; // 一轮 10 题 = 10 段关卡
 const SEGMENT_WIDTH = 620;
 const LEVEL_START_X = 300;
-const BLOCK_Y = GROUND_Y - TILE * 4.4; // 问答方块/砖块的高度
-const STATIONS = [];
-const PITS = [];
-const MONSTER_SPOTS = [];
-const SKY_MONSTER_SPOTS = [];
-const AMBIENT_COIN_SPOTS = [];
-
-for (let i = 0; i < SEGMENTS; i++) {
-  const segX = LEVEL_START_X + i * SEGMENT_WIDTH;
-  const bx = segX + 110 + TILE * 2.4;
-  STATIONS.push({ qx: segX + 110, bx });
-  MONSTER_SPOTS.push({ x: segX + 300, range: 90 });
-  SKY_MONSTER_SPOTS.push({ x: segX + 460, range: 110, baseY: BLOCK_Y - TILE * 2.4 });
-  // 中间那颗放在砖块正上方（明显在箱子上面，不会看起来卡进箱子里）
-  AMBIENT_COIN_SPOTS.push({ x: segX + 60, y: GROUND_Y - TILE * 1.6 });
-  AMBIENT_COIN_SPOTS.push({ x: bx, y: BLOCK_Y - TILE * 1.4 });
-  AMBIENT_COIN_SPOTS.push({ x: segX + 470, y: GROUND_Y - TILE * 1.6 });
-  if (i < SEGMENTS - 1) PITS.push([segX + 400, segX + 470]);
-}
-
-const STAIR_START_X = LEVEL_START_X + SEGMENTS * SEGMENT_WIDTH + 160;
+const BLOCK_Y = GROUND_Y - TILE * 4.4; // 问答方块/砖块的基准高度
 const STAIR_STEPS = 6;
-const STAIR_LAST_X = STAIR_START_X + (STAIR_STEPS - 1) * TILE;
-const GAP_START = STAIR_LAST_X + TILE;
-const GAP_END = GAP_START + TILE * 2.4;
-PITS.push([GAP_START, GAP_END]);
-const POLE_X = GAP_END + 90;
-const POLE_TOP_Y = GROUND_Y - TILE * 6.5;
-const LEVEL_WIDTH = POLE_X + 260;
+
+let STATIONS = [];
+let PITS = [];
+let MONSTER_SPOTS = [];
+let SKY_MONSTER_SPOTS = [];
+let STEP_SPOTS = [];
+let AMBIENT_COIN_SPOTS = [];
+let STAIR_START_X, STAIR_LAST_X, GAP_START, GAP_END, POLE_X, POLE_TOP_Y, LEVEL_WIDTH;
+
+function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+// 每次开新的一轮都重新生成一次关卡布局：问答方块高度、怪兽位置/方向/高度、垫脚小箱子
+// 位置都会变化，避免每一段关卡长得一模一样、玩起来太单调。
+function generateLevelLayout(){
+  STATIONS = []; PITS = []; MONSTER_SPOTS = []; SKY_MONSTER_SPOTS = []; STEP_SPOTS = []; AMBIENT_COIN_SPOTS = [];
+
+  for (let i = 0; i < SEGMENTS; i++) {
+    const segX = LEVEL_START_X + i * SEGMENT_WIDTH;
+
+    // 问答方块+砖块这一组的高度每段都不同（3.6～5.0 个 TILE 高）
+    const heightTiles = pick([3.6, 4.4, 5.0]);
+    const y = GROUND_Y - TILE * heightTiles;
+    const qx = segX + 90 + Math.random() * 40;
+    const bx = qx + TILE * 2.2 + Math.random() * 20;
+    STATIONS.push({ qx, bx, y });
+
+    // 垫脚的矮箱子：放在大箱子「旁边的下面」（左边或右边随机），比大箱子矮一截，
+    // 当作台阶，玩家可以先跳上这个矮箱子，再跳上大箱子
+    const stepOnLeft = Math.random() < 0.5;
+    const stepHeightTiles = Math.max(1.0, heightTiles - 2.0 - Math.random() * 0.6);
+    const stepY = GROUND_Y - TILE * stepHeightTiles;
+    const stepX = stepOnLeft ? qx - TILE * 1.5 : bx + TILE * 1.5;
+    STEP_SPOTS.push({ x: stepX, y: stepY });
+
+    // 地面怪物：段内位置、巡逻范围、初始方向都随机
+    MONSTER_SPOTS.push({
+      x: segX + 260 + Math.random() * 80,
+      range: 70 + Math.random() * 50,
+      dir: Math.random() < 0.5 ? 1 : -1,
+    });
+
+    // 天上的怪兽：位置、飞行高度（贴近方块高度 / 中等 / 更高）、初始方向都随机
+    SKY_MONSTER_SPOTS.push({
+      x: segX + 420 + Math.random() * 140,
+      range: 90 + Math.random() * 60,
+      baseY: BLOCK_Y - TILE * pick([1.6, 2.6, 3.4]),
+      dir: Math.random() < 0.5 ? 1 : -1,
+    });
+
+    AMBIENT_COIN_SPOTS.push({ x: segX + 40 + Math.random() * 30, y: GROUND_Y - TILE * 1.6 });
+    AMBIENT_COIN_SPOTS.push({ x: stepX, y: stepY - TILE * 1.3 }); // 鼓励玩家跳上垫脚箱
+    AMBIENT_COIN_SPOTS.push({ x: segX + 490 + Math.random() * 30, y: GROUND_Y - TILE * 1.6 });
+
+    if (i < SEGMENTS - 1) PITS.push([segX + 400, segX + 470]);
+  }
+
+  STAIR_START_X = LEVEL_START_X + SEGMENTS * SEGMENT_WIDTH + 160;
+  STAIR_LAST_X = STAIR_START_X + (STAIR_STEPS - 1) * TILE;
+  GAP_START = STAIR_LAST_X + TILE;
+  GAP_END = GAP_START + TILE * 2.4;
+  PITS.push([GAP_START, GAP_END]);
+  POLE_X = GAP_END + 90;
+  POLE_TOP_Y = GROUND_Y - TILE * 6.5;
+  LEVEL_WIDTH = POLE_X + 260;
+}
+generateLevelLayout(); // 先生成一份，保证脚本一加载就有合法布局
 
 function inPit(x) {
   return PITS.some(([a, b]) => x >= a - TILE / 4 && x <= b + TILE / 4);
@@ -779,7 +819,7 @@ class MainScene extends Phaser.Scene {
 
     this.blockGroup = this.physics.add.staticGroup();
     STATIONS.forEach((st, i) => {
-      const y = GROUND_Y - TILE * 4.4;
+      const y = st.y;
       const qBlock = this.blockGroup.create(st.qx, y, 'q_block').setScale(SCALE * 0.85).refreshBody();
       qBlock.blockType = 'q';
       qBlock.answered = false;
@@ -788,14 +828,12 @@ class MainScene extends Phaser.Scene {
 
       const bBlock = this.blockGroup.create(st.bx, y, 'brick_block').setScale(SCALE * 0.85).refreshBody();
       bBlock.blockType = 'b';
+    });
 
-      // 叠在上面那个比较矮的小箱子（纯装饰+可踩，跟下面的砖块紧贴不留缝）
-      const bBlockHeight = 40 * SCALE * 0.85;
-      const topScale = SCALE * 0.5;
-      const topHeight = 40 * topScale;
-      const topY = y - (bBlockHeight / 2 + topHeight / 2);
-      const topBlock = this.blockGroup.create(st.bx, topY, 'brick_block').setScale(topScale).refreshBody();
-      topBlock.blockType = 'b';
+    // 垫脚的矮箱子：在大箱子旁边、比较低的地方，玩家可以先跳上这个，再跳上大箱子
+    STEP_SPOTS.forEach(spot => {
+      const stepBlock = this.blockGroup.create(spot.x, spot.y, 'brick_block').setScale(SCALE * 0.6).refreshBody();
+      stepBlock.blockType = 'b';
     });
 
     this.player = this.physics.add.sprite(140, GROUND_Y - 120, 'atlas', 'player/idle/player-idle-1');
@@ -815,7 +853,7 @@ class MainScene extends Phaser.Scene {
       m.setScale(SCALE * 0.85);
       m.play('frog-idle');
       m.setCollideWorldBounds(false);
-      m.setVelocityX(45);
+      m.setVelocityX(45 * spot.dir);
       m.minX = spot.x - spot.range;
       m.maxX = spot.x + spot.range;
       m.alive = true;
@@ -831,7 +869,7 @@ class MainScene extends Phaser.Scene {
       m.setScale(SCALE * 0.8);
       m.play('eagle-fly');
       m.body.setAllowGravity(false);
-      m.setVelocityX(60);
+      m.setVelocityX(60 * spot.dir);
       m.minX = spot.x - spot.range;
       m.maxX = spot.x + spot.range;
       m.baseY = spot.baseY;
