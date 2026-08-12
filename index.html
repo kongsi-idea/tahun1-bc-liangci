@@ -397,14 +397,15 @@
 <script>
 /* ============================================================
    0. 班级名单：网址带 ?code= 时向 kelasku 拿这个班的学生名单
-      （多班用逗号合并会自动分组显示成多个班级页签）；没有 code
-      或查无资料时，CLASSES 是空的，画面只会剩「不选名字」可选，
+      （多班用逗号合并会自动分组显示成多个班级页签）；没有网址代码
+      会弹框让学生/老师直接打代码（打过会记住，不用每次都打），
+      跳过或查无资料时 CLASSES 是空的，画面只会剩「不选名字」可选，
       方便其他学校借用这个游戏时不需要维护班级名单
    ============================================================ */
 let CLASSES = {}; // { [className]: [{ name, playCode }, ...] }
 async function loadClassesFromKelasku() {
   if (typeof ClassCode === 'undefined') return;
-  const roster = await ClassCode.load();
+  const roster = await ClassCode.loadOrPrompt();
   const grouped = {};
   roster.forEach((s) => {
     (grouped[s.className] = grouped[s.className] || []).push({ name: s.name, playCode: s.playCode });
