@@ -488,14 +488,16 @@ function drawRoundQuestions(){
 }
 
 /* ============================================================
-   2. 排行榜后端：这个工具专属的 liangci_scores 表（跟 kelasku 同一个
-      kongsi-idea Supabase project），写入一律走 SECURITY DEFINER 的
-      submit_liangci_score() 函数，前端没有直接改分数的权限。
+   2. 排行榜后端：这个工具专属的 tahun1_bc_liangci_scores 表（表名用完整
+      slug 当前缀，不是只取「liangci」，避免以后出现同关键词不同年级的
+      工具时抢同一张表；跟 kelasku 同一个 kongsi-idea Supabase project），
+      写入一律走 SECURITY DEFINER 的 submit_tahun1_bc_liangci_score()
+      函数，前端没有直接改分数的权限。
       supabaseClient 没连上（比如脚本被挡）时退回本机 localStorage 模拟。
    ============================================================ */
 async function submitScoreToBackend(payload){
   if (typeof supabaseClient !== 'undefined') {
-    const { data, error } = await supabaseClient.rpc('submit_liangci_score', {
+    const { data, error } = await supabaseClient.rpc('submit_tahun1_bc_liangci_score', {
       p_play_code: payload.playCode || null,
       p_class_label: payload.cls === GUEST_KEY || !payload.cls ? '访客' : `${payload.cls} 班`,
       p_name: payload.name,
@@ -519,7 +521,7 @@ async function submitScoreToBackend(payload){
 async function fetchLeaderboard(){
   if (typeof supabaseClient !== 'undefined') {
     const { data, error } = await supabaseClient
-      .from('liangci_scores')
+      .from('tahun1_bc_liangci_scores')
       .select('name, class_label, score, attempts')
       .order('score', { ascending: false })
       .limit(100);
