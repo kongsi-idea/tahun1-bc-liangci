@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>量词大冒险 · 像素闯关</title>
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+<!-- kelasku：?code= 有效时读班级学生名单；排行榜也接的是同一个 kongsi-idea Supabase project -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://kongsi-idea.vercel.app/data/supabase-client.js"></script>
+<script src="https://kongsi-idea.vercel.app/data/class-code-client.js"></script>
 <style>
   :root{
     --bg:#0B1E2D; --bg-soft:#16324a; --teal:#0EA5B7; --teal-light:#14C2D6;
@@ -379,7 +383,7 @@
   <div class="screen" id="screen-board">
     <div class="card">
       <div id="board-title">量词大冒险 · 排行榜</div>
-      <div id="board-sub">1I 班 · 1G 班 挑战成绩（历史最高分）</div>
+      <div id="board-sub">全部挑战成绩（历史最高分）</div>
       <div id="board-list"><div id="board-empty">正在加载…</div></div>
       <div id="board-actions">
         <button class="btn secondary" id="board-refresh">刷新</button>
@@ -392,12 +396,21 @@
 
 <script>
 /* ============================================================
-   0. 班级名单（沿用《一年级华文闯关问答》同一份 1I / 1G 名单）
+   0. 班级名单：网址带 ?code= 时向 kelasku 拿这个班的学生名单
+      （多班用逗号合并会自动分组显示成多个班级页签）；没有 code
+      或查无资料时，CLASSES 是空的，画面只会剩「不选名字」可选，
+      方便其他学校借用这个游戏时不需要维护班级名单
    ============================================================ */
-const CLASSES = {
-  "1I": ["谢佳宸","钟乐鹏","王梓宇","颜杰森","何承傧","李铭澔","许宸赫","许志安","顾宇乐","赖军暤","林安晟","罗茂洋","黄凯轩","郭瑞杰","董乐","黄明泽","吴昱杰","刘伊祎","陈偌宁","钟畇乐","吴辰娜","吴钫淣","吴钫嗪","马颖婕","许昕宁","李雨瞳","林柃希","王菱敏","刘乐蒽","张敏晏","张恩珣","黄湘霖","冯馨敏","谢瑜晨","张乐妍"],
-  "1G": ["王煜勛","陈恩康","周宇轩","黄毅翔","杨伟皓","杨正宇","林锦喆","廖柏权","卢教炡","阿迪","玛丁","黄铭浚","谢宇恒","孙昊","陈有程","韦凯俊","尤辰瑞","余俊宏","徐语涵","黄欣怡","陳淑雯","谢淑惠","罗瑾棠","哈拿","张歆宁","何佳倩","罗楚恩","龚伊恩","黎馨雅","李嘉怡","陈乐妮","诺阿拉花","潘妤瑄","恺拉阿菲亚","施允熙","陈愉媗","叶禹彤"]
-};
+let CLASSES = {}; // { [className]: [{ name, playCode }, ...] }
+async function loadClassesFromKelasku() {
+  if (typeof ClassCode === 'undefined') return;
+  const roster = await ClassCode.load();
+  const grouped = {};
+  roster.forEach((s) => {
+    (grouped[s.className] = grouped[s.className] || []).push({ name: s.name, playCode: s.playCode });
+  });
+  CLASSES = grouped;
+}
 
 /* ============================================================
    1. 量词学习内容 + 题库生成（一年级华文 5.3 认识各类词语 —— 量词）
@@ -467,17 +480,20 @@ function drawRoundQuestions(){
 }
 
 /* ============================================================
-   2. 排行榜后端（阶段一：本机 localStorage 模拟；填了 API_URL 后自动切换成
-      共享后端 —— 部署方式见同资料夹 部署步骤.md + Code.gs）
+   2. 排行榜后端：这个工具专属的 liangci_scores 表（跟 kelasku 同一个
+      kongsi-idea Supabase project），写入一律走 SECURITY DEFINER 的
+      submit_liangci_score() 函数，前端没有直接改分数的权限。
+      supabaseClient 没连上（比如脚本被挡）时退回本机 localStorage 模拟。
    ============================================================ */
-const API_URL = ''; // 部署好 Apps Script Web App 后，把网址贴在这里
-
 async function submitScoreToBackend(payload){
-  if (API_URL) {
-    try {
-      const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'submit', ...payload }) });
-      return await res.json();
-    } catch (e) { return { error: String(e) }; }
+  if (typeof supabaseClient !== 'undefined') {
+    const { data, error } = await supabaseClient.rpc('submit_liangci_score', {
+      p_play_code: payload.playCode || null,
+      p_class_label: payload.cls === GUEST_KEY || !payload.cls ? '访客' : `${payload.cls} 班`,
+      p_name: payload.name,
+      p_score: payload.score,
+    });
+    if (!error && data && data[0]) return { best: data[0].best, attempts: data[0].attempts };
   }
   const key = 'liangci_leaderboard_fallback';
   const list = JSON.parse(localStorage.getItem(key) || '[]');
@@ -493,11 +509,13 @@ async function submitScoreToBackend(payload){
 }
 
 async function fetchLeaderboard(){
-  if (API_URL) {
-    try {
-      const res = await fetch(`${API_URL}?action=leaderboard`);
-      return await res.json();
-    } catch (e) { return []; }
+  if (typeof supabaseClient !== 'undefined') {
+    const { data, error } = await supabaseClient
+      .from('liangci_scores')
+      .select('name, class_label, score, attempts')
+      .order('score', { ascending: false })
+      .limit(100);
+    if (!error && data) return data.map(r => ({ name: r.name, cls: r.class_label, score: r.score, attempts: r.attempts }));
   }
   const list = JSON.parse(localStorage.getItem('liangci_leaderboard_fallback') || '[]');
   return list.sort((a, b) => b.score - a.score);
@@ -518,7 +536,7 @@ document.getElementById('title-start-btn').onclick = () => { showScreen('select'
 /* ---- 3a. 选人 ---- */
 // 第三个选项 GUEST：不选名字直接开始，方便其他学校借用这个游戏时不需要维护班级名单
 const GUEST_KEY = 'GUEST';
-let pickedCls = Object.keys(CLASSES)[0];
+let pickedCls = GUEST_KEY;
 function renderClassTabs(){
   const wrap = document.getElementById('class-tabs');
   const tabs = [...Object.keys(CLASSES), GUEST_KEY];
@@ -534,15 +552,19 @@ function renderNameGrid(){
     document.getElementById('guest-start-btn').onclick = () => { currentStudent = null; enterSlides('first'); };
     return;
   }
-  wrap.innerHTML = CLASSES[pickedCls].map(name => `<button class="name-btn" data-name="${name}">${name}</button>`).join('');
+  wrap.innerHTML = CLASSES[pickedCls].map(s => `<button class="name-btn" data-name="${s.name}">${s.name}</button>`).join('');
   wrap.querySelectorAll('.name-btn').forEach(btn => btn.onclick = () => {
-    currentStudent = { cls: pickedCls, name: btn.dataset.name };
+    const s = CLASSES[pickedCls].find(x => x.name === btn.dataset.name);
+    currentStudent = { cls: pickedCls, name: s.name, playCode: s.playCode || null };
     enterSlides('first');
   });
 }
 document.getElementById('select-board-link').onclick = () => { showScreen('board'); loadBoard(); };
-renderClassTabs();
-renderNameGrid();
+loadClassesFromKelasku().then(() => {
+  pickedCls = Object.keys(CLASSES)[0] || GUEST_KEY;
+  renderClassTabs();
+  renderNameGrid();
+});
 
 /* ---- 3b. Slides 学习 ---- */
 let slideList = [];
@@ -713,7 +735,7 @@ window.onRoundEnd = function(stats){
   showScreen('result');
   renderResult(stats);
   if (currentStudent) {
-    submitScoreToBackend({ cls: currentStudent.cls, name: currentStudent.name, score: stats.score });
+    submitScoreToBackend({ cls: currentStudent.cls, name: currentStudent.name, playCode: currentStudent.playCode, score: stats.score });
   }
 };
 
