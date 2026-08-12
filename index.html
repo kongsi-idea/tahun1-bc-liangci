@@ -118,10 +118,15 @@
   }
   .name-btn:active { border-bottom-width: 1px; transform: translateY(2px); }
   .name-btn.picked { border-color: var(--gold); background: #3a2a10; color: var(--gold-soft); }
-  #select-board-link {
-    margin-top: 18px; background: none; border: none; color: var(--text-dim);
-    font-size: 12px; text-decoration: underline; cursor: pointer; font-family: inherit;
+  #board-fab {
+    position: fixed; top: 14px; right: 14px; z-index: 500;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(180deg, var(--gold), #C97F1E);
+    border: 3px solid var(--gold-soft); border-bottom-width: 5px;
+    font-size: 26px; line-height: 1; cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
   }
+  #board-fab:active { border-bottom-width: 3px; transform: translateY(2px); }
 
   /* ---------- Slides 学习页（一年级适用：字体整体放大约一倍，卡片更大更活泼） ---------- */
   #screen-slides { padding: 16px; }
@@ -305,6 +310,9 @@
 <body>
 <div id="app">
 
+  <!-- 排行榜浮动图示：开始页/选人页都看得到，比原本藏在选人页底下那行小字明显 -->
+  <button id="board-fab" aria-label="查看排行榜" title="查看排行榜">🏆</button>
+
   <!-- 0. 开始页（像素风主题页） -->
   <div class="screen active" id="screen-title">
     <div id="title-card">
@@ -327,7 +335,6 @@
       <div id="select-sub">先选班级，再点自己的名字（其他学校可选「不选名字」直接开始）</div>
       <div class="class-tabs" id="class-tabs"></div>
       <div class="name-grid" id="name-grid"></div>
-      <button id="select-board-link">查看排行榜</button>
     </div>
   </div>
 
@@ -528,6 +535,8 @@ async function fetchLeaderboard(){
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
   document.getElementById('screen-' + id).classList.add('active');
+  // 排行榜浮动按钮只在准备/结算阶段出现，学习卡片和实际闯关时藏起来，不挡画面/不分心
+  document.getElementById('board-fab').style.display = (id === 'slides' || id === 'game') ? 'none' : '';
 }
 
 let currentStudent = null; // { cls, name }
@@ -560,12 +569,18 @@ function renderNameGrid(){
     enterSlides('first');
   });
 }
-document.getElementById('select-board-link').onclick = () => { showScreen('board'); loadBoard(); };
+document.getElementById('board-fab').onclick = () => { showScreen('board'); loadBoard(); };
 loadClassesFromKelasku().then(() => {
   pickedCls = Object.keys(CLASSES)[0] || GUEST_KEY;
   renderClassTabs();
   renderNameGrid();
 });
+
+// 首页工具卡片上的排行榜图示会带 ?board=1，打开直接跳排行榜，不用先玩一轮
+if (new URLSearchParams(window.location.search).get('board') === '1') {
+  showScreen('board');
+  loadBoard();
+}
 
 /* ---- 3b. Slides 学习 ---- */
 let slideList = [];
