@@ -281,6 +281,28 @@
     z-index: 15; pointer-events: none;
   }
 
+  /* ---------- 手机虚拟按键（只有触控装置才会显示，靠 JS 侦测后加 .touch-device） ---------- */
+  #touch-controls { display: none; position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+  .touch-device #touch-controls { display: block; }
+  .touch-btn {
+    position: absolute; pointer-events: auto;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; color: #fff; font-weight: 900;
+    background: rgba(14,165,183,0.55); border: 3px solid rgba(255,255,255,0.55);
+    -webkit-user-select: none; user-select: none; touch-action: none;
+  }
+  .touch-btn:active { background: rgba(14,165,183,0.85); transform: scale(0.92); }
+  #touch-left, #touch-right {
+    width: 62px; height: 62px; font-size: 28px; bottom: 26px;
+  }
+  #touch-left { left: 20px; }
+  #touch-right { left: 96px; }
+  #touch-jump {
+    width: 78px; height: 78px; font-size: 26px; right: 24px; bottom: 30px;
+    background: rgba(240,169,59,0.6); border-color: rgba(255,255,255,0.7);
+  }
+  #touch-jump:active { background: rgba(240,169,59,0.9); }
+
   /* ---------- 结算页 ---------- */
   #screen-result .card { width: min(90%, 420px); }
   #result-title { font-size: 26px; font-weight: 900; margin-bottom: 12px; }
@@ -365,6 +387,11 @@
       <div id="game-container"></div>
       <div id="feedback-banner"></div>
       <div id="hint-toast">方向键移动 · 空格跳跃（可连跳2次）· 答题时 ↑↓选答案 空格确定</div>
+      <div id="touch-controls">
+        <button id="touch-left" class="touch-btn" aria-label="向左移动">◀</button>
+        <button id="touch-right" class="touch-btn" aria-label="向右移动">▶</button>
+        <button id="touch-jump" class="touch-btn" aria-label="跳跃">跳</button>
+      </div>
       <div id="quiz-overlay">
         <div id="quiz-card" class="card">
           <span id="quiz-tag">一年级 · 华文 · 量词</span>
@@ -1129,8 +1156,42 @@ class MainScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-S', () => this.moveQuizSelection(1));
     this.input.keyboard.on('keydown-ENTER', () => this.confirmQuizSelection());
 
+    this.touchLeft = false;
+    this.touchRight = false;
+    this.touchJumpQueued = false;
+    this.setupTouchControls();
+
     this.buildHUD();
     this.buildEnding();
+  }
+
+  setupTouchControls() {
+    // 手机没有实体键盘，方向键/WASD/空格永远不会触发——之前学生反应"手机打不开来玩"
+    // 就是卡在这里。按钮节点用 cloneNode 换掉旧的，是因为每次重玩 startNewRound() 都会
+    // new 一个新的 Phaser.Game/Scene，若直接在旧 DOM 节点上叠加 addEventListener，
+    // 每重玩一次就多绑一份监听器（虽然旧 scene 已销毁不影响手感，但监听器会无限累积）
+    const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    document.getElementById('app').classList.toggle('touch-device', isTouch);
+    if (isTouch) {
+      const hint = document.getElementById('hint-toast');
+      if (hint) hint.textContent = '左右按钮移动 · 跳跃键起跳（可连跳2次）· 答题时直接点选答案';
+      const quizHint = document.getElementById('quiz-key-hint');
+      if (quizHint) quizHint.textContent = '点一下答案即可';
+    }
+
+    const rebind = (id, onDown, onUp) => {
+      const old = document.getElementById(id);
+      if (!old) return;
+      const el = old.cloneNode(true);
+      old.parentNode.replaceChild(el, old);
+      el.addEventListener('pointerdown', (e) => { e.preventDefault(); onDown(); });
+      el.addEventListener('pointerup', (e) => { e.preventDefault(); onUp(); });
+      el.addEventListener('pointercancel', (e) => { e.preventDefault(); onUp(); });
+      el.addEventListener('pointerleave', (e) => { e.preventDefault(); onUp(); });
+    };
+    rebind('touch-left', () => { this.touchLeft = true; }, () => { this.touchLeft = false; });
+    rebind('touch-right', () => { this.touchRight = true; }, () => { this.touchRight = false; });
+    rebind('touch-jump', () => { this.touchJumpQueued = true; }, () => {});
   }
 
   makeBlockTextures() {
@@ -1287,6 +1348,7 @@ class MainScene extends Phaser.Scene {
   resetMovementKeyStates() {
     if (this.cursors) { this.cursors.up && this.cursors.up.reset(); this.cursors.down && this.cursors.down.reset(); }
     if (this.keys) { this.keys.SPACE && this.keys.SPACE.reset(); this.keys.W && this.keys.W.reset(); this.keys.S && this.keys.S.reset(); }
+    this.touchLeft = false; this.touchRight = false; this.touchJumpQueued = false;
   }
 
   answerQuiz(isCorrect, block, btnEl, optsWrap) {
@@ -1433,9 +1495,10 @@ class MainScene extends Phaser.Scene {
       this.loseLife('掉进坑里了！');
     }
 
-    const left = this.cursors.left.isDown || this.keys.A.isDown;
-    const right = this.cursors.right.isDown || this.keys.D.isDown;
-    const jumpPressed = Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.keys.SPACE) || Phaser.Input.Keyboard.JustDown(this.keys.W);
+    const left = this.cursors.left.isDown || this.keys.A.isDown || this.touchLeft;
+    const right = this.cursors.right.isDown || this.keys.D.isDown || this.touchRight;
+    const jumpPressed = Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.keys.SPACE) || Phaser.Input.Keyboard.JustDown(this.keys.W) || this.touchJumpQueued;
+    this.touchJumpQueued = false;
     const onGround = this.player.body.blocked.down || this.player.body.touching.down;
 
     if (left && !right) { this.player.setVelocityX(-190); this.player.setFlipX(true); }
