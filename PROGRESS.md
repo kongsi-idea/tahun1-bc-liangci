@@ -56,6 +56,7 @@ python3 -m http.server 8744
 - **排行榜安全**：`Code.gs` 原本 `doPost` 接受公开的 `action:'clear'`，任何人对着 Web App 网址发请求就能清空全部排行榜资料；`submitScore` 也没有验证 `cls`/`name`/`score`，理论上可以伪造任意班级/姓名/超高分数提交。修复：① 拿掉公开的 clear 入口，`clearScores()` 只能在 Apps Script 编辑器里手动执行；② `validateSubmission()` 用跟前端同一份 `CLASSES` 白名单验证班级+姓名，`score` 限制在 0~300（10 题满分 100 + 旗杆最高 80 奖励，留余裕）的整数。**前端加/减学生名单时，`Code.gs` 里的 `CLASSES` 常量要手动同步**，不是自动共享同一份资料
 - **排行榜 XSS**：`loadBoard()` 原本把后端读回来的 `name`/`cls` 直接拼进 `innerHTML` 字符串，如果排行榜姓名字段被塞入 HTML/script 会在别人打开排行榜页面时执行（存储型 XSS）。改成用 `document.createElement` + `textContent` 逐一组装 DOM 节点，不再用字符串拼接
 - **手机触摸滚动**：`touch-action:none` 原本设在 `html, body` 全局，导致手机在学习页（内容常常比视口高）滑不动、按不到下方按钮。改成只设在 `#screen-game`，其他画面手机可以正常滑动
+- **手机虚拟按键（2026-09-15）**：游戏本体移动/跳跃原本完全靠 `this.input.keyboard`（方向键/WASD/空格），手机没有实体键盘，这些事件永远不会触发——用户反馈"手机进去就不能玩"。加了触控侦测（`'ontouchstart' in window || navigator.maxTouchPoints > 0`），侦测到就在 `#app` 加 `.touch-device` class 显示左下 ◀▶、右下「跳」三个 DOM 按钮，`pointerdown/up` 设置的布尔状态跟原本 `isDown`/`JustDown` 判断做 `||`，键盘操作完全不受影响（同一台设备键盘+触控可以混用）。刻意没做虚拟摇杆或拖拽式方向控制——三个离散按钮已经是这类平台跳跃游戏最常见的手感，加摇杆是过度设计。答题选项本来就是点击 DOM 按钮（`btn.onclick`），手机点击一直都能用，没有另外改。按钮节点用 `cloneNode` 换掉旧的再重新绑定事件，是因为每次「再玩一次」`startNewRound()` 都会 `new Phaser.Game()` 产生新的 scene 实例，若直接在旧 DOM 节点上叠加监听器，重玩几次后同一个按钮就会累积好几份监听器。
 
 ## 已上线
 - GitHub：`kongsi-idea/tahun1-bc-liangci`，Vercel：https://tahun1-bc-liangci.vercel.app
@@ -63,15 +64,15 @@ python3 -m http.server 8744
 - 共享排行榜后端还没部署，`API_URL` 目前是空字符串，排行榜数据只存在打开网页那台设备的浏览器里——用户选择先上线、之后再接 Google Sheet 后端。**接后端之前 `Code.gs` 的安全修复必须先部署**，不然跨设备风险就会真的启用
 
 ## 已知/待处理
-- Vercel 项目的 GitHub 自动部署连接失败过一次（`vercel git connect` 报错，可能是 GitHub App 权限还没授权到这个新仓库），目前是手动 `vercel deploy --prod` 上线的，之后改代码要记得手动重新部署，或请用户去 Vercel 后台补权限
+- Vercel 项目的 GitHub 自动部署连接失败过一次（`vercel git connect` 报错，可能是 GitHub App 权限还没授权到这个新仓库），目前是手动 `vercel deploy --prod` 上线的，之后改代码要记得手动重新部署，或请用户去 Vercel 后台补权限（2026-09-15 再次确认：`git push` 后线上确实没自动更新，仍需手动 `vercel --prod`）
 - 学生完整姓名目前写死在前端源码里（`CLASSES` 常量，`Code.gs` 也有一份同步的白名单），公共网页源码可以直接看到两班学生姓名——如果要更在意未成年人隐私，可以考虑改成学号/代称，或整理成教师端可管理的名单，但会牵动选人页 UI 和排行榜显示，是产品决定不是纯 bug，还没跟用户讨论定案
-- 没有做移动端触屏控制（跟原版 mario-game 一样，游戏本体只支持键盘操作；学习 slides 页面手机触摸没问题）
 - Phaser 完全依赖 jsDelivr CDN（`<script src="https://cdn.jsdelivr.net/...">`），学校网络如果挡 CDN，游戏会整个启动不了；可以考虑把 Phaser 文件下载到 `assets/` 本地化，还没做
 - 1400+ 行 HTML/CSS/题库/游戏逻辑全部在一个文件里，后续改动容易互相影响；可以考虑拆成 `data.js`/`ui.js`/`game.js`/`styles.css`，还没做（拆分本身风险较高，要先有完整回归测试再动）
 - 每轮关卡布局改成随机生成后，还没有请用户实机确认新的垫脚箱子攀爬节奏、老鹰不同高度的手感是否都合适
 
 ## 下一步
-等用户实机试玩确认这几轮调整（垫脚箱子改单向平台、10 题必须答完才算过关、题库排除多解题）没问题，再讨论：① 要不要接 Google Sheet 共享排行榜（`Code.gs` 安全修复已就绪）；② 学生姓名隐私要不要改成学号/代称；③ Phaser 本地化 + 代码拆分这类不影响功能、纯粹降低维护风险的技术债要不要排进去。
+- 手机虚拟按键（2026-09-15 已上线）还没请用户拿真机实际点过——本地只用 Playwright 模拟触控事件验证过逻辑（按钮出现、按左右会移动、按跳跃键速度变化），按钮大小/位置手感需要真机确认
+- 等用户实机试玩确认这几轮调整（垫脚箱子改单向平台、10 题必须答完才算过关、题库排除多解题）没问题，再讨论：① 要不要接 Google Sheet 共享排行榜（`Code.gs` 安全修复已就绪）；② 学生姓名隐私要不要改成学号/代称；③ Phaser 本地化 + 代码拆分这类不影响功能、纯粹降低维护风险的技术债要不要排进去。
 
 ## 2026-08-05 内容纠错
 用户反馈部分量词例词「小学生不是很懂，或是有错误」。对照《一年级华文课本》全文核实（课本 33 页《大小多少》明确教「一只老虎」「一群天鹅」，量词「群」和「只」对比是课本原文教材）：
